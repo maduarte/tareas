@@ -45,8 +45,10 @@
     justify-content: space-between; height: 58px;
     position: sticky; top: 0; z-index: 100;
   }
-  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo { font-size: 20px; font-weight: 700; letter-spacing: -0.5px; cursor: default; }
   .logo span { color: var(--accent); }
+  .logo-user { color: var(--text-mid); font-weight: 500; cursor: pointer; }
+  .logo-user:hover { color: var(--accent); }
   .header-actions { display: flex; gap: 8px; }
   .btn-icon {
     background: none; border: 1.5px solid var(--border);
@@ -254,7 +256,7 @@
 <body>
 
 <header>
-  <div class="logo">ta<span>reas</span></div>
+  <div class="logo">ta<span>reas</span> <span class="logo-user" id="logoUser" onclick="openNameModal()" title="Cambiar nombre"></span></div>
   <div class="header-actions">
     <button class="btn-icon" onclick="openAmbitosModal()">⚙ Grupos</button>
     <button class="btn-icon" onclick="exportJSON()">↓ Export</button>
@@ -360,6 +362,23 @@
   </div>
 </div>
 
+<!-- NAME MODAL -->
+<div class="modal-overlay" id="nameModal">
+  <div class="modal">
+    <div class="modal-title">
+      <span>¿Cómo te llamas?</span>
+      <button class="modal-close" id="nameModalClose" onclick="closeNameModal()" style="display:none">×</button>
+    </div>
+    <div class="form-row">
+      <label>Nombre</label>
+      <input type="text" id="fUserName" placeholder="Tu nombre" onkeydown="if(event.key==='Enter')saveUserName()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="saveUserName()">Guardar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── ÁMBITOS DEFAULT ──────────────────────────────────────────────
 const DEFAULT_AMBITOS = [
@@ -373,6 +392,7 @@ const DEFAULT_AMBITOS = [
 // ─── STATE ───────────────────────────────────────────────────────
 let tasks = [];
 let ambitos = [];
+let userName = '';
 let currentTab = 'hoy';
 let editingId = null;
 let moveSourceId = null;
@@ -385,6 +405,7 @@ function load() {
     const a = JSON.parse(localStorage.getItem('tareas_ambitos_v1'));
     ambitos = (Array.isArray(a) && a.length) ? a : JSON.parse(JSON.stringify(DEFAULT_AMBITOS));
   } catch(e) { ambitos = JSON.parse(JSON.stringify(DEFAULT_AMBITOS)); }
+  userName = localStorage.getItem('tareas_username') || '';
 }
 function save() {
   localStorage.setItem('tareas_v2', JSON.stringify(tasks));
@@ -392,6 +413,29 @@ function save() {
 }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 function getAmbito(id) { return ambitos.find(a=>a.id===id) || { nombre:id, emoji:'📌', stripe:'#ccc', bg:'#f0f0f0', label:'#555' }; }
+
+// ─── USUARIO ─────────────────────────────────────────────────────
+function renderUserName() {
+  document.getElementById('logoUser').textContent = userName;
+}
+function openNameModal() {
+  document.getElementById('fUserName').value = userName;
+  document.getElementById('nameModalClose').style.display = userName ? 'block' : 'none';
+  document.getElementById('nameModal').classList.add('open');
+  setTimeout(()=>document.getElementById('fUserName').focus(),200);
+}
+function closeNameModal() {
+  if (!userName) return;
+  document.getElementById('nameModal').classList.remove('open');
+}
+function saveUserName() {
+  const name = document.getElementById('fUserName').value.trim();
+  if (!name) { document.getElementById('fUserName').focus(); return; }
+  userName = name;
+  localStorage.setItem('tareas_username', userName);
+  renderUserName();
+  document.getElementById('nameModal').classList.remove('open');
+}
 
 // ─── TABS ────────────────────────────────────────────────────────
 function renderTabs() {
@@ -719,11 +763,12 @@ function exportJSON(){
 }
 
 // ─── CERRAR MODALES ──────────────────────────────────────────────
-['taskModal','ambitosModal'].forEach(id=>{
+['taskModal','ambitosModal','nameModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{
     if(e.target===document.getElementById(id)){
       if(id==='taskModal')closeTaskModal();
-      else closeAmbitosModal();
+      else if(id==='ambitosModal')closeAmbitosModal();
+      else closeNameModal();
     }
   });
 });
@@ -732,6 +777,8 @@ function exportJSON(){
 load();
 renderCards();
 checkAlarmas();
+renderUserName();
+if (!userName) openNameModal();
 
 // ─── SERVICE WORKER (PWA) ─────────────────────────────────────────
 if ('serviceWorker' in navigator) {
