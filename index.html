@@ -138,8 +138,6 @@
   .card-main { flex: 1; min-width: 0; }
   .card-title { font-size: 15px; font-weight: 600; line-height: 1.35; margin-bottom: 4px; word-break: break-word; }
   .task-card.completada .card-title { text-decoration: line-through; color: var(--text-light); }
-  .card-desc { font-size: 13px; color: var(--text-mid); line-height: 1.4; margin-bottom: 8px; word-break: break-word; }
-
   .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; padding-left: 12px; }
   .tag { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 20px; letter-spacing: 0.3px; text-transform: uppercase; }
   .tag-prio-alta  { background: var(--prio-alta); color: var(--prio-alta-label); }
@@ -147,15 +145,7 @@
   .tag-prio-baja  { background: var(--prio-baja); color: var(--prio-baja-label); }
   .tag-deadline { background: #fce4ec; color: #8e1a4a; }
   .tag-deadline.vencida { background: var(--prio-alta); color: var(--prio-alta-label); }
-  .tag-tipo { background: #e8eaf6; color: #3949ab; }
-
-  .card-progress { padding-left: 12px; margin-bottom: 10px; }
-  .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
-  .progress-bar-bg { flex: 1; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
-  .progress-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
-  .p100{background:var(--green)} .phigh{background:#5b9fd4} .pmid{background:var(--yellow)} .plow{background:#e0dbd5}
-  .progress-label { font-size: 12px; font-weight: 700; color: var(--text-mid); min-width: 32px; text-align: right; }
-  .hours-info { font-size: 11px; color: var(--text-light); }
+  .tag-alarma { background: #e8eaf6; color: #3949ab; }
 
   .card-footer { display: flex; align-items: center; justify-content: space-between; padding-left: 12px; margin-top: 4px; }
   .card-meta { font-size: 11px; color: var(--text-light); }
@@ -215,24 +205,7 @@
   .form-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .form-check-row { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--text-mid); }
   .form-check-row input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; }
-  .range-with-label { display: flex; align-items: center; gap: 12px; }
-  input[type=range] { flex:1; -webkit-appearance:none; height:6px; border-radius:3px; background:var(--bg); outline:none; }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:var(--accent); cursor:pointer; border:2px solid white; box-shadow:0 1px 4px rgba(0,0,0,0.18); }
-  .range-val { font-size:14px; font-weight:700; min-width:38px; text-align:right; }
-
-  .timelog-list { margin-top:8px; border:1.5px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; }
-  .timelog-entry { padding:8px 12px; display:flex; align-items:center; gap:10px; font-size:13px; border-bottom:1px solid var(--border); }
-  .timelog-entry:last-child { border-bottom:none; }
-  .timelog-date { color:var(--text-light); font-size:12px; min-width:100px; }
-  .timelog-hours { font-weight:700; min-width:56px; color:var(--blue); }
-  .timelog-nota { color:var(--text-mid); flex:1; }
-  .timelog-del { background:none; border:none; color:var(--text-light); cursor:pointer; font-size:16px; }
-  .timelog-del:hover { color:var(--red); }
-  .timelog-add { display:grid; grid-template-columns:90px 1fr auto; gap:8px; margin-top:10px; }
-  .timelog-add input { font-family:var(--font); font-size:13px; border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:7px 10px; outline:none; }
-  .timelog-add input:focus { border-color:var(--blue); }
-  .btn-add-log { background:var(--blue); color:white; border:none; border-radius:var(--radius-sm); padding:7px 14px; font-family:var(--font); font-size:13px; cursor:pointer; }
-  .btn-add-log:hover { background:#4a8fc4; }
+  .alarma-datetime { margin-top:10px; }
 
   .modal-footer { display:flex; gap:10px; margin-top:24px; justify-content:flex-end; }
   .btn-secondary { font-family:var(--font); font-size:14px; font-weight:500; padding:10px 20px; border:1.5px solid var(--border); border-radius:var(--radius-sm); background:var(--white); color:var(--text-mid); cursor:pointer; transition:all 0.13s; }
@@ -241,11 +214,6 @@
   .btn-primary:hover { background:var(--accent-hover); }
   .btn-danger { font-family:var(--font); font-size:14px; padding:10px 18px; background:none; border:1.5px solid #ffcccc; color:var(--red); border-radius:var(--radius-sm); cursor:pointer; margin-right:auto; }
   .btn-danger:hover { background:#fff0f0; }
-
-  .gist-status { font-size:13px; padding:10px 14px; border-radius:var(--radius-sm); margin-top:12px; }
-  .gist-status.ok { background:#e6f4ea; color:#2d6a4f; }
-  .gist-status.err { background:#fce4ec; color:#8e1a4a; }
-  .gist-status.info { background:#fff3cd; color:#7a5200; }
 
   /* ─── ÁMBITOS MANAGER ─── */
   .ambito-list { display:flex; flex-direction:column; gap:8px; margin-bottom:16px; }
@@ -288,8 +256,7 @@
 <header>
   <div class="logo">ta<span>reas</span></div>
   <div class="header-actions">
-    <button class="btn-icon" onclick="openAmbitosModal()">⚙ Ámbitos</button>
-    <button class="btn-icon" onclick="openGistModal()">⇅ Gist</button>
+    <button class="btn-icon" onclick="openAmbitosModal()">⚙ Grupos</button>
     <button class="btn-icon" onclick="exportJSON()">↓ Export</button>
   </div>
 </header>
@@ -306,10 +273,9 @@
     </div>
     <select class="filter-select" id="sortSelect" onchange="renderCards()">
       <option value="orden">Orden manual</option>
-      <option value="prioridad">Prioridad</option>
+      <option value="prioridad">Urgencia</option>
       <option value="deadline">Deadline</option>
-      <option value="avance">Avance</option>
-      <option value="ambito">Ámbito</option>
+      <option value="ambito">Grupo</option>
     </select>
   </div>
   <div class="move-mode-hint" id="moveModeHint">
@@ -331,37 +297,18 @@
       <label>Título *</label>
       <input type="text" id="fTitulo" placeholder="¿Qué hay que hacer?">
     </div>
-    <div class="form-row">
-      <label>Descripción / Notas</label>
-      <textarea id="fDesc" placeholder="Contexto, subtareas, links..."></textarea>
-    </div>
     <div class="form-cols">
       <div class="form-row">
-        <label>Ámbito</label>
+        <label>Grupo</label>
         <select id="fAmbito"></select>
       </div>
       <div class="form-row">
-        <label>Tipo de acción</label>
-        <select id="fTipo">
-          <option value="hacer">▶ Hacer</option>
-          <option value="esperar">⏸ Esperar</option>
-          <option value="delegar">↗ Delegar</option>
-          <option value="revisar">👁 Revisar</option>
-        </select>
-      </div>
-    </div>
-    <div class="form-cols">
-      <div class="form-row">
-        <label>Prioridad</label>
+        <label>Nivel de urgencia</label>
         <select id="fPrioridad">
           <option value="alta">🔴 Alta</option>
           <option value="media">🟡 Media</option>
           <option value="baja">🟢 Baja</option>
         </select>
-      </div>
-      <div class="form-row">
-        <label>Tiempo estimado (hrs)</label>
-        <input type="number" id="fTiempoEst" min="0" step="0.5" placeholder="Ej: 2.5">
       </div>
     </div>
     <div class="form-row">
@@ -369,20 +316,12 @@
       <input type="datetime-local" id="fDeadline">
     </div>
     <div class="form-row">
-      <label>% de avance</label>
-      <div class="range-with-label">
-        <input type="range" id="fAvance" min="0" max="100" value="0"
-          oninput="document.getElementById('fAvanceVal').textContent=this.value+'%'">
-        <span class="range-val" id="fAvanceVal">0%</span>
+      <div class="form-check-row">
+        <input type="checkbox" id="fAlarmaActiva" onchange="onToggleAlarma()">
+        <label for="fAlarmaActiva" style="text-transform:none;letter-spacing:0;font-size:14px;font-weight:400;">Activar alarma</label>
       </div>
-    </div>
-    <div class="form-row">
-      <label>Registro de horas trabajadas</label>
-      <div id="timelogList" class="timelog-list" style="display:none"></div>
-      <div class="timelog-add">
-        <input type="number" id="tlHoras" min="0.25" step="0.25" placeholder="Horas">
-        <input type="text" id="tlNota" placeholder="Nota (opcional)">
-        <button class="btn-add-log" onclick="addTimeLog()">+ Agregar</button>
+      <div class="alarma-datetime" id="alarmaDatetimeRow" style="display:none">
+        <input type="datetime-local" id="fAlarmaFecha">
       </div>
     </div>
     <div class="form-row">
@@ -403,44 +342,20 @@
 <div class="modal-overlay" id="ambitosModal">
   <div class="modal">
     <div class="modal-title">
-      <span>Gestionar ámbitos</span>
+      <span>Gestionar grupos</span>
       <button class="modal-close" onclick="closeAmbitosModal()">×</button>
     </div>
     <div id="ambitosList" class="ambito-list"></div>
-    <div style="font-size:12px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Nuevo ámbito</div>
+    <div style="font-size:12px;font-weight:600;color:var(--text-mid);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Nuevo grupo</div>
     <div class="new-ambito-form">
       <input type="text" class="emoji-input" id="newAmbitoEmoji" placeholder="📌" maxlength="2" title="Emoji (opcional)">
-      <input type="text" id="newAmbitoNombre" placeholder="Nombre del ámbito">
+      <input type="text" id="newAmbitoNombre" placeholder="Nombre del grupo">
       <input type="color" id="newAmbitoColor" value="#9dc8f0" title="Color de acento">
       <button class="btn-add-ambito" onclick="addAmbito()">+ Crear</button>
     </div>
-    <p class="ambito-form-hint">El color que eliges se usa como franja lateral en las tarjetas. No se puede eliminar un ámbito que tenga tareas asignadas.</p>
+    <p class="ambito-form-hint">El color que eliges se usa como franja lateral en las tarjetas. No se puede eliminar un grupo que tenga tareas asignadas.</p>
     <div class="modal-footer">
       <button class="btn-primary" onclick="closeAmbitosModal()">Listo</button>
-    </div>
-  </div>
-</div>
-
-<!-- GIST MODAL -->
-<div class="modal-overlay" id="gistModal">
-  <div class="modal">
-    <div class="modal-title">
-      <span>Sincronización con GitHub Gist</span>
-      <button class="modal-close" onclick="closeGistModal()">×</button>
-    </div>
-    <div class="form-row">
-      <label>Personal Access Token (scope: gist)</label>
-      <input type="text" id="gToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
-    </div>
-    <div class="form-row">
-      <label>Gist ID (vacío = crear nuevo)</label>
-      <input type="text" id="gGistId" placeholder="Ej: a1b2c3d4e5f6...">
-    </div>
-    <div id="gistStatus"></div>
-    <div class="modal-footer">
-      <button class="btn-secondary" onclick="closeGistModal()">Cerrar</button>
-      <button class="btn-primary" onclick="gistLoad()" style="background:var(--blue)">↓ Cargar desde Gist</button>
-      <button class="btn-primary" onclick="gistSave()">↑ Guardar en Gist</button>
     </div>
   </div>
 </div>
@@ -461,7 +376,6 @@ let ambitos = [];
 let currentTab = 'hoy';
 let editingId = null;
 let moveSourceId = null;
-let tempTimeLogs = [];
 
 const PRIO_ORDER = { alta:0, media:1, baja:2 };
 
@@ -506,7 +420,6 @@ function getSortedTasks(list) {
   if (sort==='orden')     arr.sort((a,b)=>(a.orden||0)-(b.orden||0));
   else if (sort==='prioridad') arr.sort((a,b)=>PRIO_ORDER[a.prioridad]-PRIO_ORDER[b.prioridad]);
   else if (sort==='deadline')  arr.sort((a,b)=>{ if(!a.deadline&&!b.deadline)return 0; if(!a.deadline)return 1; if(!b.deadline)return -1; return new Date(a.deadline)-new Date(b.deadline); });
-  else if (sort==='avance') arr.sort((a,b)=>a.avance-b.avance);
   else if (sort==='ambito') { const o={}; ambitos.forEach((a,i)=>o[a.id]=i); arr.sort((a,b)=>(o[a.ambito]||99)-(o[b.ambito]||99)); }
   return arr;
 }
@@ -531,7 +444,7 @@ function renderCards() {
       hoy:`<div class="today-hint">Aún no agregas tareas para hoy.<br>Abre cualquier tarea y activa "Agregar a la lista de hoy".</div>`,
       todas:`<div class="empty-state"><div class="empty-icon">✦</div><div class="empty-title">Sin tareas</div><div class="empty-sub">Toca + para crear la primera.</div></div>`
     };
-    container.innerHTML = msgs[currentTab] || `<div class="empty-state"><div class="empty-icon">✦</div><div class="empty-title">Sin tareas en este ámbito</div></div>`;
+    container.innerHTML = msgs[currentTab] || `<div class="empty-state"><div class="empty-icon">✦</div><div class="empty-title">Sin tareas en este grupo</div></div>`;
     return;
   }
   let html = '';
@@ -554,14 +467,12 @@ function cardHTML(task) {
     const fmt = dl.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})+' '+dl.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
     deadlineTag = `<span class="tag tag-deadline${v?' vencida':''}">⏰ ${fmt}</span>`;
   }
-  const totalHs = (task.timeLogs||[]).reduce((s,e)=>s+(e.horas||0),0);
-  const estHs = task.tiempoEstimado;
-  let hoursInfo = '';
-  if (totalHs>0) { hoursInfo=`${totalHs.toFixed(1)} hrs trabajadas`; if(estHs) hoursInfo+=` / ${estHs} hrs est. (${Math.round(totalHs/estHs*100)}%)`; }
-  else if (estHs) { hoursInfo=`Est: ${estHs} hrs`; }
-  const av = task.avance||0;
-  const pClass = av===100?'p100':av>=60?'phigh':av>=30?'pmid':'plow';
-  const tipoMap = { hacer:'▶ Hacer', esperar:'⏸ Esperar', delegar:'↗ Delegar', revisar:'👁 Revisar' };
+  let alarmaTag = '';
+  if (task.alarma && task.alarma.activa && task.alarma.fechaHora) {
+    const al = new Date(task.alarma.fechaHora);
+    const fmt = al.toLocaleDateString('es-CL',{day:'2-digit',month:'short'})+' '+al.toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'});
+    alarmaTag = `<span class="tag tag-alarma">🔔 ${fmt}</span>`;
+  }
   const hoyBtn = task.enHoy
     ? `<button class="card-btn btn-hoy-remove" onclick="toggleHoy('${task.id}',event)">☀ Hoy ✕</button>`
     : `<button class="card-btn" onclick="toggleHoy('${task.id}',event)">☀ Hoy</button>`;
@@ -572,22 +483,14 @@ function cardHTML(task) {
       <button class="card-check" onclick="toggleComplete('${task.id}',event)"><span class="card-check-icon">✓</span></button>
       <div class="card-main">
         <div class="card-title">${esc(task.titulo)}</div>
-        ${task.descripcion?`<div class="card-desc">${esc(task.descripcion).replace(/\n/g,'<br>')}</div>`:''}
       </div>
     </div>
     <div class="card-tags">
       ${ambitoTag}
       <span class="tag tag-prio-${task.prioridad}">${prioLabel(task.prioridad)}</span>
-      ${task.tipo&&task.tipo!=='hacer'?`<span class="tag tag-tipo">${tipoMap[task.tipo]||''}</span>`:''}
       ${deadlineTag}
+      ${alarmaTag}
     </div>
-    ${av>0||hoursInfo?`<div class="card-progress">
-      <div class="progress-row">
-        <div class="progress-bar-bg"><div class="progress-bar-fill ${pClass}" style="width:${av}%"></div></div>
-        <span class="progress-label">${av}%</span>
-      </div>
-      ${hoursInfo?`<div class="hours-info">${hoursInfo}</div>`:''}
-    </div>`:''}
     <div class="card-footer">
       <span class="card-meta">Creada ${formatDate(task.fechaCreacion)}</span>
       <div class="card-actions">
@@ -633,7 +536,6 @@ function toggleComplete(id, e) {
   e.stopPropagation();
   const t=tasks.find(x=>x.id===id); if(!t)return;
   t.completada=!t.completada;
-  if(t.completada) t.avance=100;
   save(); renderCards();
 }
 function toggleHoy(id, e) {
@@ -654,7 +556,6 @@ function populateAmbitoSelect(selectedId) {
 function openTaskModal(id, e) {
   if(e) e.stopPropagation();
   editingId = id||null;
-  tempTimeLogs = [];
   const t = id ? tasks.find(x=>x.id===id) : null;
   document.getElementById('modalTitleText').textContent = t ? 'Editar tarea' : 'Nueva tarea';
   document.getElementById('btnDelete').style.display = t ? 'block' : 'none';
@@ -662,32 +563,22 @@ function openTaskModal(id, e) {
     ? currentTab : (ambitos[0]?.id||'');
   if (t) {
     document.getElementById('fTitulo').value = t.titulo||'';
-    document.getElementById('fDesc').value = t.descripcion||'';
     populateAmbitoSelect(t.ambito||defaultAmbito);
-    document.getElementById('fTipo').value = t.tipo||'hacer';
     document.getElementById('fPrioridad').value = t.prioridad||'media';
-    document.getElementById('fTiempoEst').value = t.tiempoEstimado||'';
     document.getElementById('fDeadline').value = t.deadline ? isoToLocal(t.deadline) : '';
-    document.getElementById('fAvance').value = t.avance||0;
-    document.getElementById('fAvanceVal').textContent = (t.avance||0)+'%';
+    document.getElementById('fAlarmaActiva').checked = !!(t.alarma&&t.alarma.activa);
+    document.getElementById('fAlarmaFecha').value = t.alarma&&t.alarma.fechaHora ? isoToLocal(t.alarma.fechaHora) : '';
     document.getElementById('fEnHoy').checked = !!t.enHoy;
-    tempTimeLogs = JSON.parse(JSON.stringify(t.timeLogs||[]));
   } else {
     document.getElementById('fTitulo').value='';
-    document.getElementById('fDesc').value='';
     populateAmbitoSelect(defaultAmbito);
-    document.getElementById('fTipo').value='hacer';
     document.getElementById('fPrioridad').value='media';
-    document.getElementById('fTiempoEst').value='';
     document.getElementById('fDeadline').value='';
-    document.getElementById('fAvance').value=0;
-    document.getElementById('fAvanceVal').textContent='0%';
+    document.getElementById('fAlarmaActiva').checked = false;
+    document.getElementById('fAlarmaFecha').value='';
     document.getElementById('fEnHoy').checked = currentTab==='hoy';
-    tempTimeLogs=[];
   }
-  document.getElementById('tlHoras').value='';
-  document.getElementById('tlNota').value='';
-  renderTimeLogModal();
+  onToggleAlarma();
   document.getElementById('taskModal').classList.add('open');
   setTimeout(()=>document.getElementById('fTitulo').focus(),200);
 }
@@ -696,6 +587,21 @@ function isoToLocal(iso) {
   const d=new Date(iso); const p=n=>String(n).padStart(2,'0');
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+function onToggleAlarma() {
+  const activa = document.getElementById('fAlarmaActiva').checked;
+  document.getElementById('alarmaDatetimeRow').style.display = activa ? 'block' : 'none';
+  if (activa && 'Notification' in window && Notification.permission==='default') {
+    Notification.requestPermission();
+  }
+}
+function buildAlarma(prevAlarma) {
+  const activa = document.getElementById('fAlarmaActiva').checked;
+  const fechaRaw = document.getElementById('fAlarmaFecha').value;
+  if (!activa || !fechaRaw) return { activa:false, fechaHora:null, disparada:false };
+  const fechaHora = new Date(fechaRaw).toISOString();
+  const cambioFecha = !prevAlarma || prevAlarma.fechaHora !== fechaHora;
+  return { activa:true, fechaHora, disparada: cambioFecha ? false : !!prevAlarma.disparada };
+}
 function saveTask() {
   const titulo = document.getElementById('fTitulo').value.trim();
   if (!titulo) { document.getElementById('fTitulo').focus(); return; }
@@ -703,31 +609,27 @@ function saveTask() {
   if (editingId) {
     const t=tasks.find(x=>x.id===editingId);
     if(t){
-      t.titulo=titulo; t.descripcion=document.getElementById('fDesc').value.trim();
-      t.ambito=document.getElementById('fAmbito').value; t.tipo=document.getElementById('fTipo').value;
+      t.titulo=titulo;
+      t.ambito=document.getElementById('fAmbito').value;
       t.prioridad=document.getElementById('fPrioridad').value;
-      t.tiempoEstimado=parseFloat(document.getElementById('fTiempoEst').value)||null;
       t.deadline=deadlineRaw?new Date(deadlineRaw).toISOString():null;
-      t.avance=parseInt(document.getElementById('fAvance').value);
       t.enHoy=document.getElementById('fEnHoy').checked;
-      t.timeLogs=[...tempTimeLogs];
-      if(t.avance===100) t.completada=true;
+      t.alarma=buildAlarma(t.alarma);
     }
   } else {
     const maxO = tasks.length ? Math.max(...tasks.map(t=>t.orden||0)) : -10;
     tasks.push({
-      id:uid(), titulo, descripcion:document.getElementById('fDesc').value.trim(),
-      ambito:document.getElementById('fAmbito').value, tipo:document.getElementById('fTipo').value,
+      id:uid(), titulo,
+      ambito:document.getElementById('fAmbito').value,
       prioridad:document.getElementById('fPrioridad').value,
-      tiempoEstimado:parseFloat(document.getElementById('fTiempoEst').value)||null,
       deadline:deadlineRaw?new Date(deadlineRaw).toISOString():null,
-      avance:parseInt(document.getElementById('fAvance').value),
       enHoy:document.getElementById('fEnHoy').checked,
-      completada:false, timeLogs:[...tempTimeLogs],
+      completada:false,
+      alarma:buildAlarma(null),
       fechaCreacion:new Date().toISOString(), orden:maxO+10,
     });
   }
-  save(); closeTaskModal(); renderCards();
+  save(); closeTaskModal(); renderCards(); checkAlarmas();
 }
 function deleteTask() {
   if (!editingId) return;
@@ -736,27 +638,30 @@ function deleteTask() {
   save(); closeTaskModal(); renderCards();
 }
 
-// ─── TIME LOG ────────────────────────────────────────────────────
-function renderTimeLogModal() {
-  const list=document.getElementById('timelogList');
-  if (!tempTimeLogs.length) { list.style.display='none'; return; }
-  list.style.display='block';
-  list.innerHTML=tempTimeLogs.map((e,i)=>`
-    <div class="timelog-entry">
-      <span class="timelog-date">${new Date(e.fecha).toLocaleDateString('es-CL',{day:'2-digit',month:'short',year:'2-digit'})}</span>
-      <span class="timelog-hours">${e.horas} hrs</span>
-      <span class="timelog-nota">${esc(e.nota||'')}</span>
-      <button class="timelog-del" onclick="removeTimeLog(${i})">×</button>
-    </div>`).join('');
+// ─── ALARMAS ─────────────────────────────────────────────────────
+function checkAlarmas() {
+  const now = Date.now();
+  let changed = false;
+  tasks.forEach(t=>{
+    if (t.alarma && t.alarma.activa && !t.alarma.disparada && !t.completada && t.alarma.fechaHora && new Date(t.alarma.fechaHora).getTime()<=now) {
+      dispararAlarma(t);
+      t.alarma.disparada = true;
+      changed = true;
+    }
+  });
+  if (changed) save();
 }
-function addTimeLog() {
-  const h=parseFloat(document.getElementById('tlHoras').value);
-  if(!h||h<=0){document.getElementById('tlHoras').focus();return;}
-  tempTimeLogs.push({fecha:new Date().toISOString(),horas:h,nota:document.getElementById('tlNota').value.trim()});
-  document.getElementById('tlHoras').value=''; document.getElementById('tlNota').value='';
-  renderTimeLogModal();
+async function dispararAlarma(task) {
+  if (!('Notification' in window) || Notification.permission!=='granted') return;
+  const options = { body: `Grupo: ${getAmbito(task.ambito).nombre}`, tag: 'tarea-'+task.id };
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) { reg.showNotification('⏰ '+task.titulo, options); return; }
+  } catch(e) {}
+  new Notification('⏰ '+task.titulo, options);
 }
-function removeTimeLog(idx){tempTimeLogs.splice(idx,1);renderTimeLogModal();}
+setInterval(checkAlarmas, 20000);
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkAlarmas(); });
 
 // ─── ÁMBITOS MODAL ───────────────────────────────────────────────
 function openAmbitosModal() {
@@ -795,8 +700,8 @@ function addAmbito() {
   renderAmbitosList();
 }
 function deleteAmbito(id) {
-  if(tasks.filter(t=>t.ambito===id).length>0){alert('No puedes eliminar un ámbito que tiene tareas asignadas.');return;}
-  if(!confirm('¿Eliminar este ámbito?'))return;
+  if(tasks.filter(t=>t.ambito===id).length>0){alert('No puedes eliminar un grupo que tiene tareas asignadas.');return;}
+  if(!confirm('¿Eliminar este grupo?'))return;
   ambitos=ambitos.filter(a=>a.id!==id);
   if(currentTab===id) currentTab='hoy';
   save(); renderAmbitosList();
@@ -807,50 +712,6 @@ function hexToRgb(hex){const h=hex.replace('#','');return[parseInt(h.slice(0,2),
 function lightenHex(hex,amt){const[r,g,b]=hexToRgb(hex);const m=c=>Math.round(c+(255-c)*amt);return`rgb(${m(r)},${m(g)},${m(b)})`;}
 function darkenHex(hex,amt){const[r,g,b]=hexToRgb(hex);const m=c=>Math.round(c*(1-amt));return`rgb(${m(r)},${m(g)},${m(b)})`;}
 
-// ─── GIST ────────────────────────────────────────────────────────
-function openGistModal(){const g=loadGistCfg();document.getElementById('gToken').value=g.token||'';document.getElementById('gGistId').value=g.gistId||'';document.getElementById('gistStatus').innerHTML='';document.getElementById('gistModal').classList.add('open');}
-function closeGistModal(){document.getElementById('gistModal').classList.remove('open');}
-function loadGistCfg(){try{return JSON.parse(localStorage.getItem('tareas_gist')||'{}')}catch(e){return {};}}
-function saveGistCfg(t,g){localStorage.setItem('tareas_gist',JSON.stringify({token:t,gistId:g}));}
-function setGistStatus(m,t){document.getElementById('gistStatus').innerHTML=`<div class="gist-status ${t}">${m}</div>`;}
-
-async function gistSave(){
-  const token=document.getElementById('gToken').value.trim();
-  const gistId=document.getElementById('gGistId').value.trim();
-  if(!token){setGistStatus('Necesitas ingresar tu token.','err');return;}
-  setGistStatus('Guardando...','info');
-  const body={description:'Tareas App Data',public:false,files:{'tareas.json':{content:JSON.stringify({tasks,ambitos},null,2)}}};
-  try{
-    let url='https://api.github.com/gists',method='POST';
-    if(gistId){url+='/'+gistId;method='PATCH';}
-    const res=await fetch(url,{method,headers:{Authorization:'token '+token,'Content-Type':'application/json'},body:JSON.stringify(body)});
-    if(!res.ok)throw new Error(res.statusText);
-    const json=await res.json();
-    document.getElementById('gGistId').value=json.id;
-    saveGistCfg(token,json.id);
-    setGistStatus(`✓ Guardado. Gist ID: <strong>${json.id}</strong>`,'ok');
-  }catch(e){setGistStatus('Error: '+e.message,'err');}
-}
-async function gistLoad(){
-  const token=document.getElementById('gToken').value.trim();
-  const gistId=document.getElementById('gGistId').value.trim();
-  if(!token||!gistId){setGistStatus('Necesitas token y Gist ID para cargar.','err');return;}
-  setGistStatus('Cargando...','info');
-  try{
-    const res=await fetch(`https://api.github.com/gists/${gistId}`,{headers:{Authorization:'token '+token}});
-    if(!res.ok)throw new Error(res.statusText);
-    const json=await res.json();
-    const content=json.files['tareas.json']?.content;
-    if(!content)throw new Error('No se encontró tareas.json en el gist.');
-    const loaded=JSON.parse(content);
-    if(Array.isArray(loaded)){tasks=loaded;}
-    else{tasks=loaded.tasks||[];if(Array.isArray(loaded.ambitos)&&loaded.ambitos.length)ambitos=loaded.ambitos;}
-    saveGistCfg(token,gistId);save();
-    setGistStatus(`✓ ${tasks.length} tarea${tasks.length!==1?'s':''} cargada${tasks.length!==1?'s':''}.`,'ok');
-    renderCards();
-  }catch(e){setGistStatus('Error: '+e.message,'err');}
-}
-
 function exportJSON(){
   const b=new Blob([JSON.stringify({tasks,ambitos},null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);
@@ -858,11 +719,10 @@ function exportJSON(){
 }
 
 // ─── CERRAR MODALES ──────────────────────────────────────────────
-['taskModal','gistModal','ambitosModal'].forEach(id=>{
+['taskModal','ambitosModal'].forEach(id=>{
   document.getElementById(id).addEventListener('click',e=>{
     if(e.target===document.getElementById(id)){
       if(id==='taskModal')closeTaskModal();
-      else if(id==='gistModal')closeGistModal();
       else closeAmbitosModal();
     }
   });
@@ -871,6 +731,7 @@ function exportJSON(){
 // ─── INIT ────────────────────────────────────────────────────────
 load();
 renderCards();
+checkAlarmas();
 
 // ─── SERVICE WORKER (PWA) ─────────────────────────────────────────
 if ('serviceWorker' in navigator) {
