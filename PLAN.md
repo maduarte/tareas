@@ -1,6 +1,6 @@
 # Plan: alarmas confiables y despliegue en Vercel
 
-Estado: **planificado, sin implementar**. Basado en `../ncs-app`, que ya resuelve en Vercel + Upstash Redis problemas parecidos (código de sync, namespaces, TTL).
+Estado: **Fases A y A2 implementadas; B y C pendientes**. Basado en `../ncs-app`, que ya resuelve en Vercel + Upstash Redis problemas parecidos (código de sync, namespaces, TTL).
 
 ## Contexto y alcance
 
@@ -16,14 +16,14 @@ Las alarmas usan la Notification API y un chequeo cada 20 s (`index.html`). Solo
 ## Fases
 
 ### Fase A: mejoras sin backend (ahora)
-- [ ] Marcar cada alarma como disparada.
-- [ ] Al abrir o volver a la app, mostrar las alarmas vencidas no disparadas (banner o modal).
-- [ ] Botón "Importar JSON" (hoy solo existe exportar).
-- [ ] `sw.js`: `CACHE_NAME` versionado, `APP_SHELL` con manifiesto e íconos.
-- [ ] `manifest.json`: separar `purpose` de los íconos en `any` y `maskable`.
-- [ ] README: documentar `tareas_username` en la tabla de almacenamiento.
+- [x] Marcar cada alarma como disparada.
+- [x] Al abrir o volver a la app, mostrar las alarmas vencidas no disparadas (banner o modal).
+- [x] Botón "Importar JSON" (hoy solo existe exportar).
+- [x] `sw.js`: `CACHE_NAME` versionado, `APP_SHELL` con manifiesto e íconos.
+- [x] `manifest.json`: separar `purpose` de los íconos en `any` y `maskable`.
+- [x] README: documentar `tareas_username` en la tabla de almacenamiento.
 
-### Fase A2: rediseño a lista minimalista
+### Fase A2: rediseño a lista minimalista (implementado en lo esencial)
 Mockup de referencia: [diseno/mockup.html](diseno/mockup.html). La app pasa a ser una lista simple por grupo, como el papel de la persona usuaria, con detalles opcionales.
 
 **Decisiones de diseño**
