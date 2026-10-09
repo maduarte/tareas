@@ -89,12 +89,13 @@
   .detail { padding: 2px 0 14px 36px; display: flex; flex-direction: column; gap: 12px; }
   .drow { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-light); min-height: 30px; }
   .drow .k { width: 62px; flex: none; }
-  .pill { position: relative; display: inline-block; background: var(--chip); color: var(--text-mid); padding: 6px 12px; border-radius: 999px; font-size: 13px; border: 1px solid transparent; cursor: pointer; font-family: var(--font); }
+  .pill { position: relative; overflow: hidden; display: inline-block; background: var(--chip); color: var(--text-mid); padding: 6px 12px; border-radius: 999px; font-size: 13px; border: 1px solid transparent; cursor: pointer; font-family: var(--font); }
   .pill.add { background: none; border: 1px dashed var(--border); color: var(--text-light); }
   .pill.set { background: var(--accent-soft); color: var(--accent); }
   .pill.sel { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  .whenin { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; font-size: 16px; }
-  .xbtn { background: none; border: none; color: var(--text-light); font-size: 14px; cursor: pointer; padding: 6px; }
+  /* El input cubre la píldora (opacity 0) para abrir el selector nativo; overflow:hidden en .pill evita que iOS lo agrande sobre la ✕ */
+  .whenin { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; max-width: 100%; opacity: 0; cursor: pointer; font-size: 16px; -webkit-appearance: none; appearance: none; }
+  .xbtn { position: relative; z-index: 2; background: none; border: none; color: var(--text-light); font-size: 15px; cursor: pointer; padding: 8px 12px; margin: -4px 0; }
   .urg { display: flex; gap: 10px; }
   .urg button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; opacity: .35; cursor: pointer; }
   .urg button.sel { opacity: 1; border-color: var(--text); }
