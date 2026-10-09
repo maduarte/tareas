@@ -253,6 +253,21 @@
   </div>
 </div>
 
+<!-- ALARMA (se abre al tocar la notificación) -->
+<div class="overlay" id="alOverlay" onclick="if(event.target===this)closeAlarmSheet()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="shead"><h2 id="alTitle" style="word-break:break-word"></h2><button class="linkbtn" onclick="closeAlarmSheet()">Cerrar</button></div>
+    <p class="hint" id="alWhen" style="margin:0 0 16px"></p>
+    <div class="btnrow">
+      <button class="btn2" onclick="snoozeMinutes(10)">Posponer 10 min</button>
+      <span class="btn2" style="position:relative;overflow:hidden;display:inline-block">Elegir hora
+        <input type="datetime-local" class="whenin" onclick="try{this.showPicker()}catch(e){}" onchange="snoozeAt(this.value)"></span>
+    </div>
+    <div style="margin-top:16px"><button class="primary" onclick="doneFromSheet()">Hecho</button></div>
+  </div>
+</div>
+
 <!-- INICIALIZACIÓN -->
 <div class="onb" id="onb"><div class="onb-in" id="onbBody"></div></div>
 
@@ -762,12 +777,15 @@ function checkAlarmas() {
 async function dispararAlarma(task) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
   const a = getAmbito(task.ambito);
-  const options = { body: a ? `Grupo: ${a.nombre}` : '', tag: 'tarea-' + task.id };
+  const options = {
+    body: a ? `Grupo: ${a.nombre}` : '', tag: 'tarea-' + task.id, data: { taskId: task.id, titulo: task.titulo },
+    actions: [{ action: 'snooze10', title: 'Posponer 10 min' }], vibrate: [200, 100, 200, 100, 200], requireInteraction: true
+  };
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (reg) { reg.showNotification('⏰ ' + task.titulo, options); return; }
   } catch(e) {}
-  new Notification('⏰ ' + task.titulo, options);
+  new Notification('⏰ ' + task.titulo, { body: options.body, tag: options.tag });
 }
 // ─── ALARMAS CON LA APP CERRADA (Web Push + QStash, ver PLAN.md) ──
 // Cada dispositivo tiene su propio código: las tareas viven en el dispositivo,
@@ -855,7 +873,52 @@ async function onPushBtn() {
   if (ok) syncAlarmas();
 }
 
+// ─── HOJA DE ALARMA: posponer / hecho ────────────────────────────
+let alId = null;
+function openAlarmSheet(id) {
+  const t = T(id); if (!t || t.completada) return;
+  alId = id;
+  document.getElementById('alTitle').textContent = t.titulo;
+  document.getElementById('alWhen').textContent = t.alarma.activa ? 'Alarma de ' + fmtLong(t.alarma.fechaHora) : '';
+  document.getElementById('alOverlay').classList.add('open');
+}
+function closeAlarmSheet() { document.getElementById('alOverlay').classList.remove('open'); alId = null; }
+function snoozeMinutes(min) { snoozeAt(new Date(Date.now() + min * 60000).toISOString(), true); }
+function snoozeAt(val, isIso) {
+  const t = T(alId); if (!t || !val) return;
+  const iso = isIso ? val : new Date(val).toISOString();
+  if (new Date(iso) <= Date.now()) return;
+  t.alarma = { activa:true, fechaHora:iso, disparada:false, perdida:false, srv:false };
+  delete ultimoIntento[t.id];
+  save(); closeAlarmSheet(); render();
+  enablePush().then(syncAlarmas);
+}
+function doneFromSheet() { const id = alId; closeAlarmSheet(); if (T(id) && !T(id).completada) toggleComplete(id); }
+
+// Pospuestos desde el botón de la notificación con la app cerrada: el service
+// worker ya reprogramó la alarma en el servidor; aquí se refleja en la tarea.
+async function applyPendingSnoozes() {
+  if (!('caches' in window)) return;
+  try {
+    const c = await caches.open('tareas-meta');
+    const hit = await c.match('/__snooze'); if (!hit) return;
+    const list = await hit.json(); await c.delete('/__snooze');
+    let changed = false;
+    list.forEach(sn => {
+      const t = T(sn.taskId);
+      if (t && !t.completada) { t.alarma = { activa:true, fechaHora:sn.at, disparada:false, perdida:false, srv:true }; changed = true; }
+    });
+    if (changed) { save(); render(); }
+  } catch(e) {}
+}
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'alarma') { applyPendingSnoozes().then(() => openAlarmSheet(e.data.taskId)); }
+  });
+}
+
 function tick() {
+  applyPendingSnoozes();
   syncAlarmas();
   checkAlarmas();
   if (purgeCompleted()) { save(); render(); }
@@ -866,7 +929,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) tick
 // ─── TECLADO ─────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  closeAdd(); closeSettings();
+  closeAdd(); closeSettings(); closeAlarmSheet();
 });
 
 // ─── INICIALIZACIÓN (primer uso) ─────────────────────────────────
@@ -944,6 +1007,10 @@ load();
 applyTheme();
 render();
 checkAlarmas();
+applyPendingSnoozes().then(() => {
+  const id = new URLSearchParams(location.search).get('alarma');
+  if (id) { history.replaceState(null, '', location.pathname); openAlarmSheet(id); }
+});
 if (lsGet(K.push) === '1') enablePush().then(syncAlarmas);
 if (!lsGet(K.onb)) {
   if (esPrimeraVez) startOnboarding(true);

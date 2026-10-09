@@ -70,6 +70,10 @@ Requiere backend, así que incluye la migración a Vercel.
    - [x] `sw.js`: handler `push` (fetch a `due` y `showNotification`; si falla, notificación genérica "Tienes una alarma". En iOS cada push debe mostrar una notificación).
 4. **Variables de entorno en Vercel**: `UPSTASH_REDIS_REST_*`, `QSTASH_TOKEN`, claves VAPID, `ALARM_SECRET`, `CRON_SECRET`, `TAREAS_ORIGIN`.
 
+### Mejoras posteriores a la Fase B (hechas)
+- [x] Posponer alarmas: botón *Posponer 10 min* en la notificación (no iOS) y hoja al tocarla con *Posponer 10 min*, *Elegir hora* y *Hecho*.
+- [x] Vibración y `requireInteraction` en las notificaciones. El sonido no es configurable desde la web: lo decide el teléfono.
+
 ### Fase C: solo si hace falta
 - Sync de tareas entre dispositivos de la misma persona (`api/sync.js` por código, copiado de ncs-app) y badge de estado. Se hace si alguien usa la app en más de un dispositivo.
 

@@ -37,6 +37,8 @@ Modo claro y oscuro (automático según el sistema, o fijo), con cinco colores d
 - Notificación del navegador a la hora programada. Se revisa cada 20 segundos y al volver a la app.
 - **Con la app cerrada**: Web Push programado desde el servidor (QStash). Se activa en Ajustes → «Alarmas con la app cerrada», o al poner la primera alarma. En iPhone hay que instalar antes la app en la pantalla de inicio (iOS 16.4+).
 - Una alarma que no sonó a tiempo no se pierde en silencio: queda en un aviso arriba de la lista.
+- **Posponer:** al tocar la notificación se abre una hoja con *Posponer 10 min*, *Elegir hora* y *Hecho*. En Android y Chrome de escritorio la notificación trae además un botón *Posponer 10 min* que funciona sin abrir la app (iOS no muestra botones en notificaciones web).
+- **Sonido:** lo decide el teléfono, no la app. En iPhone: Ajustes → Notificaciones → Tareas; en Android: ajustes de notificaciones del navegador o de la app instalada. Desde la web solo se controla la vibración (Android) y que la notificación no se cierre sola (escritorio).
 
 ### Datos
 - **Exportar** e **Importar** un respaldo JSON desde Ajustes.

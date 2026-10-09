@@ -1,5 +1,5 @@
 // Subir el número de CACHE cuando cambie la lista de archivos o su estrategia.
-const CACHE = 'tareas-v4';
+const CACHE = 'tareas-v5';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -47,7 +47,7 @@ self.addEventListener('push', e => {
     } catch (_) {}
     if (alarms && alarms.length) {
       await Promise.all(alarms.map(a =>
-        self.registration.showNotification('⏰ ' + a.titulo, { tag: 'tarea-' + a.taskId })));
+        self.registration.showNotification('⏰ ' + a.titulo, alarmOptions(a.taskId, a.titulo))));
       return;
     }
     // Sin títulos: o falló la consulta, o la alarma ya se mostró (la app abierta
@@ -61,14 +61,63 @@ self.addEventListener('push', e => {
   })());
 });
 
+// Opciones comunes de una notificación de alarma. El sonido lo decide el sistema
+// (ajustes de notificaciones del teléfono); desde la web solo se controla la
+// vibración (Android) y que no se cierre sola (escritorio). Los botones de
+// acción no existen en iOS: allí queda la hoja que se abre al tocar.
+function alarmOptions(taskId, titulo) {
+  return {
+    tag: 'tarea-' + taskId,
+    data: { taskId, titulo },
+    actions: [{ action: 'snooze10', title: 'Posponer 10 min' }],
+    vibrate: [200, 100, 200, 100, 200],
+    requireInteraction: true
+  };
+}
+
+const POSPONER_MS = 10 * 60 * 1000;
+
+// Pospone desde el botón con la app cerrada: reprograma en el servidor y deja
+// anotado en 'tareas-meta' para que la app lo aplique a la tarea al abrirse.
+async function posponer(data) {
+  const meta = await caches.open('tareas-meta');
+  const hit = await meta.match('/__code');
+  const code = hit ? await hit.text() : null;
+  const at = new Date(Date.now() + POSPONER_MS).toISOString();
+  let ok = false;
+  try {
+    if (code) {
+      const res = await fetch('/api/alarms/schedule', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, taskId: data.taskId, titulo: data.titulo, at })
+      });
+      ok = res.ok;
+    }
+  } catch (_) {}
+  if (!ok) {
+    await self.registration.showNotification('No se pudo posponer', { body: data.titulo, tag: 'tarea-' + data.taskId });
+    return;
+  }
+  const prev = await meta.match('/__snooze');
+  const list = prev ? await prev.json() : [];
+  list.push({ taskId: data.taskId, at });
+  await meta.put('/__snooze', new Response(JSON.stringify(list)));
+}
+
 self.addEventListener('notificationclick', e => {
+  const data = e.notification.data || {};
   e.notification.close();
-  e.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
-      for (const client of clientList) {
-        if ('focus' in client) return client.focus();
+  if (e.action === 'snooze10' && data.taskId) { e.waitUntil(posponer(data)); return; }
+  e.waitUntil((async () => {
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of list) {
+      if ('focus' in client) {
+        if (data.taskId) client.postMessage({ type: 'alarma', taskId: data.taskId });
+        return client.focus();
       }
-      if (self.clients.openWindow) return self.clients.openWindow('./');
-    })
-  );
+    }
+    if (self.clients.openWindow) {
+      return self.clients.openWindow(data.taskId ? './?alarma=' + encodeURIComponent(data.taskId) : './');
+    }
+  })());
 });

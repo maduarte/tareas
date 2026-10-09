@@ -35,6 +35,8 @@ diseno/mockup.html  mockup estático del diseño
 - **QStash es multi-región**: cada cuenta vive en una región y debe usar su URL regional (`QSTASH_URL`); con el endpoint global falla con "user not found in this region".
 - **QStash gratuito solo acepta 24 h de retraso.** Las alarmas más lejanas se guardan sin encolar (índice `tareas:pending`) y el cron diario de Vercel las encola. Hobby permite un cron por día, con jitter de hasta una hora: por eso corre a las 07:00 UTC (de madrugada en Chile).
 - **Push sin payload**: el service worker pide los títulos a `/api/alarms/due`. Cada push debe terminar en una notificación visible (iOS lo exige).
+- **Posponer:** la notificación lleva `data:{taskId,titulo}` y una acción `snooze10`. El service worker reprograma en el servidor y deja el cambio en `tareas-meta` (`/__snooze`); la app lo aplica a la tarea al abrirse. Tocar la notificación abre `./?alarma=<id>` o manda un mensaje al cliente abierto, y la app muestra la hoja de alarma.
+- **Sonido:** no es controlable desde la web (lo fija el sistema); no prometer sonidos propios ni tonos persistentes.
 - Los errores del servidor van a `console.error`; al navegador solo un mensaje genérico.
 - El código de dispositivo (`tareas_codigo`, 32 hex) es la única credencial. Se genera en el dispositivo; nunca se muestra ni se registra.
 - Al cambiar `sw.js` o la lista de archivos precacheados, subir `CACHE`.
