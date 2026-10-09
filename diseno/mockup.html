@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tareas · mockup de diseño</title>
+<style>
+  /* Mockup estático: no hay lógica, solo la propuesta visual. */
+  :root { --font: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+
+  .theme-light {
+    --bg: #f8f7f5; --surface: #ffffff; --border: #e8e5e0;
+    --text: #2a2a2a; --text-mid: #555; --text-light: #888; --done: #b5b1aa;
+    --accent: #e05a5a; --accent-soft: #fbeaea;
+    --alta: #e05a5a; --media: #e8b92e; --baja: #4caf6e;
+    --chip: #f1efeb; --fab-shadow: 0 6px 16px rgba(224,90,90,.35);
+  }
+  .theme-dark {
+    --bg: #1b1a19; --surface: #242321; --border: #34322f;
+    --text: #ecebe8; --text-mid: #b9b6b1; --text-light: #8f8c87; --done: #5d5a55;
+    --accent: #ec6f6f; --accent-soft: #3a2626;
+    --alta: #ec6f6f; --media: #f0c64a; --baja: #5cc07e;
+    --chip: #2f2d2a; --fab-shadow: 0 6px 16px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: #d9d6d1; padding: 32px 16px; color: #333; }
+  h1 { font-size: 18px; text-align: center; margin-bottom: 4px; }
+  .sub { text-align: center; color: #666; font-size: 13px; margin-bottom: 28px; }
+  .stage { display: flex; gap: 32px; justify-content: center; flex-wrap: wrap; }
+  .label { text-align: center; font-size: 12px; color: #666; margin-bottom: 8px; letter-spacing: .06em; text-transform: uppercase; }
+
+  .phone {
+    width: 360px; height: 720px; background: var(--bg); color: var(--text);
+    border-radius: 36px; border: 8px solid #111; overflow: hidden; position: relative;
+    display: flex; flex-direction: column; -webkit-font-smoothing: antialiased;
+  }
+
+  /* Encabezado */
+  .top { padding: 18px 20px 6px; display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-size: 20px; font-weight: 700; letter-spacing: -.5px; }
+  .brand span { color: var(--accent); }
+  .gear { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; color: var(--text-light); font-size: 18px; }
+
+  .seg { margin: 8px 20px 4px; display: inline-flex; background: var(--chip); border-radius: 10px; padding: 3px; align-self: flex-start; }
+  .seg b { font-weight: 500; font-size: 13px; padding: 6px 16px; border-radius: 8px; color: var(--text-light); }
+  .seg b.on { background: var(--surface); color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+  .scroll { flex: 1; overflow: hidden; padding: 6px 0 100px; }
+
+  /* Sección de grupo */
+  .group { margin-top: 14px; }
+  .ghead { display: flex; align-items: center; gap: 8px; padding: 8px 20px; }
+  .ghead .dot { width: 8px; height: 8px; border-radius: 50%; }
+  .ghead .name { font-size: 12px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--text-mid); }
+  .ghead .count { font-size: 12px; color: var(--text-light); }
+  .ghead .chev { margin-left: auto; color: var(--text-light); font-size: 12px; }
+
+  /* Fila de tarea: una línea, sin tarjeta */
+  .row { padding: 0 20px; }
+  .line { display: flex; align-items: center; gap: 12px; min-height: 46px; border-bottom: 1px solid var(--border); }
+  .check { width: 22px; height: 22px; border-radius: 50%; border: 1.8px solid var(--text-light); flex: none; }
+  .title { flex: 1; font-size: 16px; line-height: 1.3; }
+  .meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-light); flex: none; }
+  .meta .u { width: 8px; height: 8px; border-radius: 50%; }
+  .meta .late { color: var(--alta); font-weight: 600; }
+  .done .check { background: var(--done); border-color: var(--done); position: relative; }
+  .done .check::after { content: "✓"; position: absolute; inset: 0; color: var(--bg); font-size: 13px; display: grid; place-items: center; }
+  .done .title { color: var(--done); text-decoration: line-through; }
+
+  /* Fila expandida */
+  .open { background: var(--surface); margin: 2px 0; border-radius: 12px; border: 1px solid var(--border); padding: 0 14px; }
+  .open .line { border-bottom: 0; }
+  .detail { padding: 2px 0 14px 34px; display: flex; flex-direction: column; gap: 10px; }
+  .drow { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-light); }
+  .drow .k { width: 62px; }
+  .pill { background: var(--chip); color: var(--text-mid); padding: 5px 11px; border-radius: 999px; font-size: 13px; }
+  .pill.add { background: none; border: 1px dashed var(--border); color: var(--text-light); }
+  .pill.set { background: var(--accent-soft); color: var(--accent); }
+  .urg { display: flex; gap: 8px; }
+  .urg i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; display: block; opacity: .35; }
+  .urg i.sel { opacity: 1; border-color: var(--text); }
+  .dfoot { display: flex; justify-content: space-between; font-size: 13px; padding-top: 2px; }
+  .dfoot .del { color: var(--alta); }
+  .pill.hoyon { background: none; border: 1px solid var(--border); color: var(--text-light); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+  .pill.hoyon.on { background: var(--accent-soft); border-color: transparent; color: var(--accent); }
+
+  /* Botón flotante */
+  .fab { position: absolute; right: 20px; bottom: 28px; width: 56px; height: 56px; border-radius: 50%;
+         background: var(--accent); color: #fff; font-size: 30px; display: grid; place-items: center;
+         box-shadow: var(--fab-shadow); font-weight: 300; }
+
+  /* Hoja de captura */
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-top: 1px solid var(--border);
+           border-radius: 22px 22px 0 0; padding: 14px 20px 18px; box-shadow: 0 -8px 24px rgba(0,0,0,.15); }
+  .sheet .grab { width: 36px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 14px; }
+  .sheet .input { font-size: 18px; padding: 6px 0 12px; border-bottom: 1.5px solid var(--accent); }
+  .sheet .input em { color: var(--text-light); font-style: normal; }
+  .chips { display: flex; gap: 8px; padding-top: 12px; overflow: hidden; }
+  .chips .pill.sel { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .sheet .keys { margin: 14px -20px -18px; height: 150px; background: var(--chip); display: grid; place-items: center; color: var(--text-light); font-size: 12px; }
+
+  .legend { max-width: 760px; margin: 36px auto 0; font-size: 14px; line-height: 1.6; color: #333; }
+  .legend h2 { font-size: 15px; margin: 18px 0 6px; }
+  .legend li { margin-left: 20px; }
+</style>
+</head>
+<body>
+
+<h1>Tareas · propuesta visual</h1>
+<p class="sub">Mockup estático (sin funcionalidad). Izquierda: claro con una tarea expandida. Centro: oscuro. Derecha: captura con el botón +.</p>
+
+<div class="stage">
+
+  <!-- 1. CLARO -->
+  <div>
+    <div class="label">Claro · lista</div>
+    <div class="phone theme-light">
+      <div class="top"><div class="brand">Tareas · <span>Mauro</span></div><div class="gear">⚙</div></div>
+      <div class="seg"><b class="on">Todas</b><b>HOY</b></div>
+      <div class="scroll">
+
+        <div class="group">
+          <div class="ghead"><i class="dot" style="background:#e07a5a"></i><span class="name">Casa</span><span class="count">3</span><span class="chev">▾</span></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Pagar cuenta de luz</span><span class="meta"><i class="u" style="background:var(--alta)"></i><span class="late">ayer</span></span></div></div>
+
+          <div class="row"><div class="open">
+            <div class="line"><i class="check"></i><span class="title">Comprar ampolletas</span><span class="meta"><i class="u" style="background:var(--media)"></i></span></div>
+            <div class="detail">
+              <div class="drow"><span class="k">Alarma</span><span class="pill add">+ agregar</span></div>
+              <div class="drow"><span class="k">Plazo</span><span class="pill set">vie 14 · 18:00</span></div>
+              <div class="drow"><span class="k">Urgencia</span><span class="urg"><i style="background:var(--alta)"></i><i class="sel" style="background:var(--media)"></i><i style="background:var(--baja)"></i></span></div>
+              <div class="dfoot"><span class="pill hoyon">HOY</span><span class="del">Eliminar</span></div>
+            </div>
+          </div></div>
+
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Llamar al gásfiter</span><span class="meta">🔔 sáb</span></div></div>
+          <div class="row done"><div class="line"><i class="check"></i><span class="title">Sacar la basura</span></div></div>
+        </div>
+
+        <div class="group">
+          <div class="ghead"><i class="dot" style="background:#5b9fd4"></i><span class="name">Personal</span><span class="count">2</span><span class="chev">▾</span></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Hora al dentista</span><span class="meta">🔔 lun 09:00</span></div></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Renovar carnet</span></div></div>
+        </div>
+
+        <div class="group">
+          <div class="ghead"><i class="dot" style="background:#9b7fd4"></i><span class="name">Investigación</span><span class="count">4</span><span class="chev">▸</span></div>
+        </div>
+        <div class="group">
+          <div class="ghead"><i class="dot" style="background:#4caf6e"></i><span class="name">Proyectos</span><span class="count">1</span><span class="chev">▸</span></div>
+        </div>
+      </div>
+      <div class="fab">+</div>
+    </div>
+  </div>
+
+  <!-- 2. OSCURO -->
+  <div>
+    <div class="label">Oscuro · lista</div>
+    <div class="phone theme-dark">
+      <div class="top"><div class="brand">Tareas · <span>Mauro</span></div><div class="gear">⚙</div></div>
+      <div class="seg"><b>Todas</b><b class="on">HOY</b></div>
+      <div class="scroll">
+
+        <div class="group">
+          <div class="ghead"><i class="dot" style="background:#e07a5a"></i><span class="name">Casa</span><span class="count">2</span><span class="chev">▾</span></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Pagar cuenta de luz</span><span class="meta"><i class="u" style="background:var(--alta)"></i><span class="late">ayer</span></span></div></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Comprar ampolletas</span><span class="meta"><i class="u" style="background:var(--media)"></i>18:00</span></div></div>
+          <div class="row done"><div class="line"><i class="check"></i><span class="title">Sacar la basura</span></div></div>
+        </div>
+
+        <div class="group">
+          <div class="ghead"><i class="dot" style="background:#5b9fd4"></i><span class="name">Personal</span><span class="count">1</span><span class="chev">▾</span></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Llamar a mamá</span><span class="meta">🔔 20:30</span></div></div>
+          <div class="row done"><div class="line"><i class="check"></i><span class="title">Tomar remedio</span></div></div>
+        </div>
+
+        <div class="group">
+          <div class="ghead"><i class="dot" style="background:#9b7fd4"></i><span class="name">Investigación</span><span class="count">1</span><span class="chev">▾</span></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Revisar borrador del capítulo 2</span><span class="meta"><i class="u" style="background:var(--baja)"></i></span></div></div>
+        </div>
+      </div>
+      <div class="fab">+</div>
+    </div>
+  </div>
+
+  <!-- 3. CAPTURA -->
+  <div>
+    <div class="label">Claro · agregar</div>
+    <div class="phone theme-light">
+      <div class="top"><div class="brand">Tareas · <span>Mauro</span></div><div class="gear">⚙</div></div>
+      <div class="seg"><b class="on">Todas</b><b>HOY</b></div>
+      <div class="scroll" style="opacity:.35">
+        <div class="group">
+          <div class="ghead"><i class="dot" style="background:#e07a5a"></i><span class="name">Casa</span><span class="count">3</span><span class="chev">▾</span></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Pagar cuenta de luz</span></div></div>
+          <div class="row"><div class="line"><i class="check"></i><span class="title">Comprar ampolletas</span></div></div>
+        </div>
+      </div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <div class="input">Agendar mantención del auto<em>|</em></div>
+        <div class="chips">
+          <span class="pill sel">Casa</span><span class="pill">Personal</span><span class="pill">Invest.</span><span class="pill">Proy.</span>
+        </div>
+        <div class="keys">teclado</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="legend">
+  <h2>Qué cambió respecto a hoy</h2>
+  <ul>
+    <li><b>Sin tarjetas</b>: cada tarea es una línea con un círculo, el título y, solo si existe, un indicador a la derecha. Sin sombras, franjas de color ni botones por tarea.</li>
+    <li><b>Grupos como secciones</b> de tu papel: título en versalitas con un punto de color, contador de pendientes, plegables con ▾ / ▸.</li>
+    <li><b>Detalle opcional</b>: tocar la línea la despliega en el lugar, en este orden: Alarma, Plazo, Urgencia; abajo la marca HOY y Eliminar. Lo no configurado aparece como "+ agregar" punteado. HOY se activa solo si la tarea no tiene Plazo.</li>
+    <li><b>Urgencia</b> como un punto de color a la derecha (rojo, amarillo, verde). Las urgentes suben dentro de su grupo, salvo que hayas fijado un orden a mano. Sin punto = sin urgencia.</li>
+    <li><b>Completadas</b>: círculo relleno, texto tachado y gris, al final del grupo. Se borran al terminar el día.</li>
+    <li><b>Agregar</b>: botón + abajo a la derecha (zona del pulgar); abre una hoja con el teclado ya activo y chips de grupo, con el grupo actual preseleccionado.</li>
+    <li><b>Claro / oscuro</b>: misma paleta (coral de acento, urgencia rojo/amarillo/verde), con los tonos ajustados para el fondo oscuro.</li>
+  </ul>
+</div>
+
+</body>
+</html>
