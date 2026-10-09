@@ -2,3 +2,5 @@
 .env*
 !.env.example
 .DS_Store
+# Capturas del panel de Vercel/Upstash para diagnóstico: pueden mostrar cuentas y proyectos
+screenshots/
