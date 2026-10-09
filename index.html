@@ -235,6 +235,12 @@
     </div>
 
     <div class="sec">
+      <h3>Alarmas con la app cerrada</h3>
+      <p class="hint" id="pushInfo" style="margin:0 0 10px"></p>
+      <div class="btnrow"><button class="btn2" id="pushBtn" onclick="onPushBtn()" style="display:none">Activar en este dispositivo</button></div>
+    </div>
+
+    <div class="sec">
       <h3>Datos</h3>
       <div class="btnrow">
         <button class="btn2" onclick="exportJSON()">↓ Exportar</button>
@@ -263,7 +269,7 @@ const ACENTOS = ['#e05a5a','#4a8fd4','#3fa66a','#8a6fd1','#d99a1e'];
 const RANK = { alta:0, media:1, baja:2 };
 const K = {
   tasks:'tareas_v2', ambitos:'tareas_ambitos_v1', name:'tareas_username',
-  tema:'tareas_tema', onb:'tareas_onboarded', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo',
+  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo',
 };
 
 // ─── ESTADO ──────────────────────────────────────────────────────
@@ -311,7 +317,7 @@ function normalize() {
     enHoy: !!t.enHoy,
     hoyManual: t.hoyManual === undefined ? true : !!t.hoyManual,
     completada: !!t.completada, completadaEn: t.completadaEn || null,
-    alarma: t.alarma && t.alarma.activa && t.alarma.fechaHora ? { activa:true, fechaHora:t.alarma.fechaHora, disparada:!!t.alarma.disparada, perdida:!!t.alarma.perdida } : { activa:false, fechaHora:null, disparada:false },
+    alarma: t.alarma && t.alarma.activa && t.alarma.fechaHora ? { activa:true, fechaHora:t.alarma.fechaHora, disparada:!!t.alarma.disparada, perdida:!!t.alarma.perdida, srv:!!t.alarma.srv } : { activa:false, fechaHora:null, disparada:false },
     manual: !!t.manual,
     fechaCreacion: t.fechaCreacion || new Date().toISOString(),
     orden: typeof t.orden === 'number' ? t.orden : 0,
@@ -503,10 +509,11 @@ function toggleComplete(id, e) {
   t.completada = !t.completada;
   t.completadaEn = t.completada ? new Date().toISOString() : null;
   if (t.completada && openId === id) openId = null;
+  if (t.completada) { cancelAlarm(id); t.alarma.srv = false; } else syncAlarmas();
   save(); render();
 }
 function toggleHoy(id) { const t = T(id); if (!t) return; t.enHoy = !t.enHoy; t.hoyManual = true; save(); render(); }
-function setTitle(id, v) { const t = T(id); v = v.trim(); if (!t || !v) { render(); return; } t.titulo = v; save(); }
+function setTitle(id, v) { const t = T(id); v = v.trim(); if (!t || !v) { render(); return; } t.titulo = v; if (t.alarma.activa) { t.alarma.srv = false; delete ultimoIntento[id]; } save(); syncAlarmas(); }
 function setPrio(id, p) {
   const t = T(id); if (!t) return;
   t.prioridad = t.prioridad === p ? null : p;
@@ -523,18 +530,22 @@ function setWhen(id, kind, val) {
   if (kind === 'plazo') { t.deadline = iso; applyHoyDefault(t); }
   else {
     t.alarma = { activa:true, fechaHora:iso, disparada:false, perdida:false };
-    if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+    delete ultimoIntento[id];
+    save(); render();
+    enablePush().then(syncAlarmas);
+    return;
   }
   save(); render();
 }
 function clearWhen(id, kind) {
   const t = T(id); if (!t) return;
   if (kind === 'plazo') { t.deadline = null; applyHoyDefault(t); }
-  else t.alarma = { activa:false, fechaHora:null, disparada:false };
+  else { t.alarma = { activa:false, fechaHora:null, disparada:false }; cancelAlarm(id); }
   save(); render();
 }
 function askDelete(id) {
   if (confirmDelId !== id) { confirmDelId = id; render(); return; }
+  cancelAlarm(id);
   tasks = tasks.filter(t => t.id !== id); openId = null; confirmDelId = null; save(); render();
 }
 
@@ -680,6 +691,7 @@ function renderSettings() {
       <button class="del" ${c?'disabled title="Tiene tareas"':''} onclick="deleteGroup('${a.id}')">Eliminar</button></div>`;
   }).join('') : '<p class="hint">Aún no hay grupos.</p>';
   document.getElementById('setNewColor').value = nextColor();
+  renderPushInfo();
 }
 function saveName(v) { userName = v.trim(); lsSet(K.name, userName); render(); }
 function setTema(v) { prefs.tema = v; lsSet(K.tema, v); applyTheme(); renderSettings(); }
@@ -753,7 +765,94 @@ async function dispararAlarma(task) {
   } catch(e) {}
   new Notification('⏰ ' + task.titulo, options);
 }
+// ─── ALARMAS CON LA APP CERRADA (Web Push + QStash, ver PLAN.md) ──
+// Cada dispositivo tiene su propio código: las tareas viven en el dispositivo,
+// así que sus alarmas también.
+const API = { key:'/api/push/key', sub:'/api/push/subscribe', alarms:'/api/alarms/schedule' };
+function syncCode() {
+  let c = lsGet(K.codigo);
+  if (!/^[a-f0-9]{32}$/.test(c || '')) {
+    const a = new Uint8Array(16); crypto.getRandomValues(a);
+    c = Array.from(a, b => b.toString(16).padStart(2,'0')).join('');
+    lsSet(K.codigo, c);
+  }
+  return c;
+}
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+const iosNeedsInstall = () => /iphone|ipad|ipod/i.test(navigator.userAgent) && !(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+function pushState() {
+  if (iosNeedsInstall()) return 'instalar';
+  if (!pushSupported()) return 'nosoporte';
+  if (Notification.permission === 'denied') return 'denegado';
+  return Notification.permission === 'granted' && lsGet(K.push) === '1' ? 'activo' : 'inactivo';
+}
+function urlB64ToUint8(b64) {
+  const pad = '='.repeat((4 - b64.length % 4) % 4);
+  const raw = atob((b64 + pad).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(raw, ch => ch.charCodeAt(0));
+}
+async function enablePush() {
+  if (!pushSupported() || iosNeedsInstall()) return false;
+  if (Notification.permission === 'default') await Notification.requestPermission();
+  if (Notification.permission !== 'granted') return false;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const { key } = await (await fetch(API.key)).json();
+    const sub = (await reg.pushManager.getSubscription()) ||
+      await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey:urlB64ToUint8(key) });
+    const r = await fetch(API.sub, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ code:syncCode(), subscription:sub.toJSON() }) });
+    if (!r.ok) throw new Error('subscribe ' + r.status);
+    // El service worker no ve localStorage: se lo dejamos en Cache Storage
+    await (await caches.open('tareas-meta')).put('/__code', new Response(syncCode()));
+    lsSet(K.push, '1');
+    return true;
+  } catch(e) { return false; }
+}
+let syncing = false;
+const ultimoIntento = {};
+const VENTANA_SERVIDOR = 6 * 864e5; // QStash acepta ~7 días (QSTASH_MAX_DELAY_DAYS en el servidor)
+async function syncAlarmas() {
+  if (syncing || lsGet(K.push) !== '1') return;
+  syncing = true;
+  try {
+    for (const t of tasks) {
+      const al = t.alarma;
+      if (!al.activa || al.disparada || al.srv || t.completada) continue;
+      const falta = new Date(al.fechaHora) - Date.now();
+      // Muy lejos: el servidor aún no la acepta en la cola. Reintentos espaciados.
+      if (falta <= 0 || falta > VENTANA_SERVIDOR || Date.now() - (ultimoIntento[t.id] || 0) < 10 * 60 * 1000) continue;
+      ultimoIntento[t.id] = Date.now();
+      const r = await fetch(API.alarms, { method:'POST', headers:{ 'Content-Type':'application/json' },
+        body:JSON.stringify({ code:syncCode(), taskId:t.id, titulo:t.titulo, at:al.fechaHora }) });
+      if (r.ok) { al.srv = !!(await r.json()).queued; save(); }
+    }
+  } catch(e) { /* sin red: se reintenta en el próximo ciclo */ }
+  syncing = false;
+}
+function cancelAlarm(id) {
+  if (lsGet(K.push) !== '1') return;
+  fetch(`${API.alarms}?code=${syncCode()}&taskId=${encodeURIComponent(id)}`, { method:'DELETE' }).catch(() => {});
+}
+function renderPushInfo() {
+  const st = pushState();
+  const msg = {
+    activo:'Activas: las alarmas suenan aunque la app esté cerrada en este dispositivo.',
+    inactivo:'Actívalas para que las alarmas suenen aunque la app esté cerrada.',
+    denegado:'Las notificaciones están bloqueadas. Permítelas desde los ajustes del navegador o del teléfono.',
+    instalar:'En iPhone, primero agrega la app a la pantalla de inicio (Compartir → Agregar a inicio) y ábrela desde ahí.',
+    nosoporte:'Este navegador no permite alarmas con la app cerrada. Seguirán sonando mientras esté abierta.'
+  }[st];
+  document.getElementById('pushInfo').textContent = msg;
+  document.getElementById('pushBtn').style.display = st === 'inactivo' ? '' : 'none';
+}
+async function onPushBtn() {
+  const ok = await enablePush();
+  renderPushInfo();
+  if (ok) syncAlarmas();
+}
+
 function tick() {
+  syncAlarmas();
   checkAlarmas();
   if (purgeCompleted()) { save(); render(); }
 }
@@ -841,6 +940,7 @@ load();
 applyTheme();
 render();
 checkAlarmas();
+if (lsGet(K.push) === '1') enablePush().then(syncAlarmas);
 if (!lsGet(K.onb)) {
   if (esPrimeraVez) startOnboarding(true);
   else if (!userName) startOnboarding(false);

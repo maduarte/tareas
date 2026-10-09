@@ -34,9 +34,9 @@ Al abrir la app por primera vez pregunta el nombre, el modo (automático / claro
 Modo claro y oscuro (automático según el sistema, o fijo), con cinco colores de acento. Se cambian en Ajustes (⚙).
 
 ### Alarmas
-- Notificación del navegador (Notification API) a la hora programada.
-- Se revisa cada 20 segundos y también al volver a la app.
-- Funciona mientras la app esté abierta o en segundo plano reciente; no está garantizado con la app cerrada (limitación de una PWA sin backend). Ver [PLAN.md](PLAN.md) para la hoja de ruta.
+- Notificación del navegador a la hora programada. Se revisa cada 20 segundos y al volver a la app.
+- **Con la app cerrada**: Web Push programado desde el servidor (QStash). Se activa en Ajustes → «Alarmas con la app cerrada», o al poner la primera alarma. En iPhone hay que instalar antes la app en la pantalla de inicio (iOS 16.4+).
+- Una alarma que no sonó a tiempo no se pierde en silencio: queda en un aviso arriba de la lista.
 
 ### Datos
 - **Exportar** e **Importar** un respaldo JSON desde Ajustes.
@@ -59,6 +59,8 @@ Datos guardados en `localStorage`, aislados por dispositivo y navegador (no se s
 | `tareas_plegados` | Grupos plegados |
 | `tareas_ultimo_grupo` | Último grupo usado al agregar |
 | `tareas_onboarded` | El primer uso ya se completó |
+| `tareas_codigo` | Código aleatorio del dispositivo (identifica sus alarmas en el servidor) |
+| `tareas_push` | `1` si este dispositivo activó el push |
 
 ## Estructura del proyecto
 
@@ -66,7 +68,13 @@ Datos guardados en `localStorage`, aislados por dispositivo y navegador (no se s
 tareas/
 ├── index.html      # App completa (HTML + CSS + JS)
 ├── manifest.json   # Manifiesto PWA
-├── sw.js           # Service Worker
+├── sw.js           # Service Worker (caché + push)
+├── vercel.json     # Headers de seguridad
+├── privacidad.html # Qué se guarda y por cuánto tiempo
+├── api/            # Funciones serverless (alarmas y push)
+├── tools/          # vapid-keys.mjs
+├── CLAUDE.md       # Contexto para trabajar en el repo
+├── .env.example    # Nombres de las variables de entorno
 ├── icon-192.png    # Ícono PWA 192×192
 ├── icon-512.png    # Ícono PWA 512×512
 ├── PLAN.md         # Hoja de ruta (alarmas con la app cerrada, Vercel)
@@ -78,4 +86,6 @@ tareas/
 
 Servir el directorio desde un servidor estático con HTTPS (o `localhost`), necesario para el Service Worker y las notificaciones. Por ejemplo, `python3 -m http.server 8080` y abrir `http://localhost:8080`. En el teléfono, usar "Agregar a pantalla de inicio" para instalarla.
 
-La app está disponible en producción en `/tareas/` según la configuración del manifiesto.
+## Despliegue
+
+Vercel, desde `main`. Para las alarmas con la app cerrada hacen falta una base Upstash Redis, un token de QStash y las claves VAPID; los nombres de las variables están en [.env.example](.env.example) y las claves se generan con `node tools/vapid-keys.mjs`. Detalles en [CLAUDE.md](CLAUDE.md).

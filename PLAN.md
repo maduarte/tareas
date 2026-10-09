@@ -40,33 +40,33 @@ Mockup de referencia: [diseno/mockup.html](diseno/mockup.html). La app pasa a se
 - Etiqueta "Fecha" renombrada a **"Plazo"** en toda la app.
 
 **Tareas**
-- [ ] Reescribir `renderTasks` / la vista como lista por secciones (sin `.task-card`).
-- [ ] Hoja de captura con chips de grupo.
-- [ ] Detalle expandible en línea (Alarma, Plazo, Urgencia, HOY, Eliminar).
-- [ ] Regla de orden: urgentes arriba salvo orden manual; guardar si una tarea tiene posición manual.
-- [ ] Borrado de completadas al cambiar de día.
-- [ ] Tema claro/oscuro con variables CSS y `prefers-color-scheme`.
-- [ ] HOY por defecto cuando no hay Plazo; renombrar "Fecha" a "Plazo" (también en README).
-- [ ] Migración de datos: las tareas existentes conservan campos; las completadas viejas se borran en la primera carga.
+- [x] Reescribir `renderTasks` / la vista como lista por secciones (sin `.task-card`).
+- [x] Hoja de captura con chips de grupo.
+- [x] Detalle expandible en línea (Alarma, Plazo, Urgencia, HOY, Eliminar).
+- [x] Regla de orden: urgentes arriba salvo orden manual; guardar si una tarea tiene posición manual.
+- [x] Borrado de completadas al cambiar de día.
+- [x] Tema claro/oscuro con variables CSS y `prefers-color-scheme`.
+- [x] HOY por defecto cuando no hay Plazo; renombrar "Fecha" a "Plazo" (también en README).
+- [x] Migración de datos: las tareas existentes conservan campos; las completadas viejas se borran en la primera carga.
 
 ### Fase B: alarmas con la app cerrada (futuro cercano)
 Requiere backend, así que incluye la migración a Vercel.
 
 1. **Migración a Vercel**
-   - [ ] Proyecto en Vercel, `vercel.json` copiado de ncs-app (`cleanUrls`, rewrite `/api/*`, headers de seguridad).
-   - [ ] `manifest.json`: `start_url` y `scope` a `/`.
+   - [x] Proyecto en Vercel, `vercel.json` copiado de ncs-app (`cleanUrls`, rewrite `/api/*`, headers de seguridad).
+   - [x] `manifest.json`: `start_url` y `scope` a `/`.
    - [ ] Migrar los datos de cada persona: exportar JSON desde `maduarte.github.io`, importar en el dominio nuevo (otro origen, otro `localStorage`).
    - [ ] Retirar GitHub Pages o dejar una redirección con aviso.
-   - [ ] `CLAUDE.md` y un `privacidad.html` breve.
+   - [x] `CLAUDE.md` y un `privacidad.html` breve.
 2. **Backend de alarmas**, sin dependencias npm, igual que ncs-app: Upstash por REST con `fetch`, helpers en `api/_store.js`.
-   - [ ] Claves VAPID (script en `tools/`).
-   - [ ] `api/push/subscribe.js`: guarda la suscripción de cada persona.
-   - [ ] `api/alarms/schedule.js`: POST guarda la alarma y la programa en QStash (`Upstash-Not-Before`); DELETE la cancela al editar o borrar la tarea.
-   - [ ] `api/alarms/fire.js`: lo llama QStash; valida el secreto (`Upstash-Forward-Authorization` + `secretsMatch()`), comprueba que la alarma siga vigente y envía un push vacío firmado con VAPID (JWT ES256 con `crypto.subtle`).
-   - [ ] `api/alarms/due.js`: lo llama el service worker tras el push; devuelve las alarmas vencidas y las marca como disparadas.
+   - [x] Claves VAPID (script en `tools/`).
+   - [x] `api/push/subscribe.js`: guarda la suscripción de cada persona.
+   - [x] `api/alarms/schedule.js`: POST guarda la alarma y la programa en QStash (`Upstash-Not-Before`); DELETE la cancela al editar o borrar la tarea.
+   - [x] `api/alarms/fire.js`: lo llama QStash; valida el secreto (`Upstash-Forward-Authorization` + `secretsMatch()`), comprueba que la alarma siga vigente y envía un push vacío firmado con VAPID (JWT ES256 con `crypto.subtle`).
+   - [x] `api/alarms/due.js`: lo llama el service worker tras el push; devuelve las alarmas vencidas y las marca como disparadas.
 3. **Cliente**
-   - [ ] Suscribirse con `pushManager.subscribe`; llamar a `schedule` al guardar o editar y a DELETE al borrar.
-   - [ ] `sw.js`: handler `push` (fetch a `due` y `showNotification`; si falla, notificación genérica "Tienes una alarma". En iOS cada push debe mostrar una notificación).
+   - [x] Suscribirse con `pushManager.subscribe`; llamar a `schedule` al guardar o editar y a DELETE al borrar.
+   - [x] `sw.js`: handler `push` (fetch a `due` y `showNotification`; si falla, notificación genérica "Tienes una alarma". En iOS cada push debe mostrar una notificación).
 4. **Variables de entorno en Vercel**: `UPSTASH_REDIS_REST_*`, `QSTASH_TOKEN`, claves VAPID, `ALARM_SECRET`, `TAREAS_ORIGIN`.
 
 ### Fase C: solo si hace falta

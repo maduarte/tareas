@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es-CL">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<title>Privacidad · Tareas</title>
+<style>
+  :root { --bg:#f8f7f5; --text:#2a2a2a; --mid:#555; --accent:#e05a5a; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1b1a19; --text:#ecebe8; --mid:#b9b6b1; --accent:#ec6f6f; } }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); margin: 0; line-height: 1.6; }
+  main { max-width: 600px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 24px; letter-spacing: -.5px; }
+  h2 { font-size: 15px; margin-top: 28px; }
+  p, li { font-size: 15px; color: var(--mid); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Privacidad</h1>
+  <p>Tareas es una lista de tareas personal que usa un grupo reducido de personas cercanas. Estas son las únicas cosas que pasan por el servidor.</p>
+
+  <h2>Qué se guarda en tu dispositivo</h2>
+  <p>Tus tareas, grupos, nombre y preferencias viven en el almacenamiento local de tu navegador. No se envían a ningún servidor, y no se sincronizan entre dispositivos. Si borras los datos del sitio, se pierden: usa «Exportar» en Ajustes para tener una copia.</p>
+
+  <h2>Qué se guarda en el servidor</h2>
+  <p>Solo si activas las alarmas con la app cerrada:</p>
+  <ul>
+    <li>Un código aleatorio generado en tu dispositivo, que lo identifica.</li>
+    <li>La dirección de notificaciones push de tu navegador.</li>
+    <li>Por cada alarma: el título de la tarea y la hora.</li>
+  </ul>
+  <p>Con ese código cualquiera podría ver o programar las alarmas de ese dispositivo, así que no lo compartas. No se guarda tu nombre ni el resto de tu lista.</p>
+
+  <h2>Servicios que intervienen</h2>
+  <p>Vercel (alojamiento), Upstash (base de datos y programación de las alarmas) y el servicio de notificaciones push de tu navegador (Google, Apple o Mozilla).</p>
+
+  <h2>Cuánto se conserva</h2>
+  <p>Si un código pasa dos años sin usarse, sus datos se eliminan automáticamente del servidor. Las alarmas que ya sonaron se borran a los dos días. Al completar o eliminar una tarea se cancela su alarma.</p>
+
+  <p style="margin-top:32px"><a href="./">← Volver a la app</a></p>
+</main>
+</body>
+</html>

@@ -1,5 +1,5 @@
 // Subir el número de CACHE cuando cambie la lista de archivos o su estrategia.
-const CACHE = 'tareas-v2';
+const CACHE = 'tareas-v3';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -8,8 +8,9 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
+  // 'tareas-meta' guarda el código del dispositivo para el push: no se borra
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    Promise.all(keys.filter(k => k !== CACHE && k !== 'tareas-meta').map(k => caches.delete(k)))
   ));
   self.clients.claim();
 });
@@ -28,6 +29,29 @@ self.addEventListener('fetch', e => {
       return res;
     }).catch(() => caches.match(req, { ignoreSearch: true }).then(hit => hit || caches.match('./index.html')))
   );
+});
+
+// Push vacío desde el servidor: pedir qué alarmas tocan y mostrarlas. Cada push
+// debe terminar en una notificación visible (iOS lo exige).
+self.addEventListener('push', e => {
+  e.waitUntil((async () => {
+    let alarms = null;
+    try {
+      const meta = await caches.open('tareas-meta');
+      const hit = await meta.match('/__code');
+      const code = hit ? await hit.text() : null;
+      if (code) {
+        const res = await fetch('/api/alarms/due?code=' + encodeURIComponent(code), { cache: 'no-store' });
+        if (res.ok) alarms = (await res.json()).alarms;
+      }
+    } catch (_) {}
+    if (alarms && alarms.length) {
+      await Promise.all(alarms.map(a =>
+        self.registration.showNotification('⏰ ' + a.titulo, { tag: 'tarea-' + a.taskId })));
+    } else {
+      await self.registration.showNotification('⏰ Tienes una alarma', { tag: 'tarea-generica' });
+    }
+  })());
 });
 
 self.addEventListener('notificationclick', e => {
