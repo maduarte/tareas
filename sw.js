@@ -1,5 +1,5 @@
 // Subir el número de CACHE cuando cambie la lista de archivos o su estrategia.
-const CACHE = 'tareas-v3';
+const CACHE = 'tareas-v4';
 const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -48,7 +48,14 @@ self.addEventListener('push', e => {
     if (alarms && alarms.length) {
       await Promise.all(alarms.map(a =>
         self.registration.showNotification('⏰ ' + a.titulo, { tag: 'tarea-' + a.taskId })));
-    } else {
+      return;
+    }
+    // Sin títulos: o falló la consulta, o la alarma ya se mostró (la app abierta
+    // la mostró antes, o llegó un push repetido). Si hay una alarma visible no se
+    // agrega una genérica; si no hay ninguna, sí, porque cada push debe terminar
+    // en una notificación (iOS lo exige).
+    const visibles = await self.registration.getNotifications();
+    if (!visibles.some(n => (n.tag || '').startsWith('tarea-'))) {
       await self.registration.showNotification('⏰ Tienes una alarma', { tag: 'tarea-generica' });
     }
   })());

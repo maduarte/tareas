@@ -32,10 +32,12 @@ export default async function handler(req, res) {
 
   try {
     const entry = parseJSON(await cmd(db, ['HGET', keys.alarm(code), taskId]));
-    // Cancelada, ya mostrada o reprogramada a otra hora: este mensaje quedó viejo.
-    if (!entry || entry.shown || entry.at !== at) return res.status(200).json({ ok: true, skipped: true });
+    // Cancelada, ya mostrada, ya enviada o reprogramada a otra hora: este mensaje
+    // quedó viejo (QStash puede reintentar o duplicar una entrega).
+    if (!entry || entry.shown || entry.fired || entry.at !== at) return res.status(200).json({ ok: true, skipped: true });
 
     const delivered = await deliverPush(db, code);
+    if (delivered > 0) await cmd(db, ['HSET', keys.alarm(code), taskId, JSON.stringify({ ...entry, fired: true })]);
     return res.status(200).json({ ok: true, delivered });
   } catch (err) {
     return fail(res, err);
