@@ -146,6 +146,21 @@
   .btn2 { font-family: var(--font); font-size: 14px; background: var(--chip); border: none; border-radius: 10px; padding: 10px 16px; cursor: pointer; color: var(--text); }
   .hint { font-size: 12px; color: var(--text-light); margin-top: 8px; line-height: 1.5; }
   .primary { font-family: var(--font); font-size: 15px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: 12px; padding: 13px 22px; cursor: pointer; width: 100%; }
+
+  /* ─── Inicialización (primer uso) ─── */
+  .onb { position: fixed; inset: 0; z-index: 300; background: var(--bg); display: none; overflow-y: auto; }
+  .onb.open { display: block; }
+  .onb-in { max-width: 420px; margin: 0 auto; padding: calc(56px + env(safe-area-inset-top)) 24px calc(32px + env(safe-area-inset-bottom)); min-height: 100%; display: flex; flex-direction: column; }
+  .onb h1 { font-size: 26px; letter-spacing: -.5px; margin-bottom: 8px; }
+  .onb p.lead { color: var(--text-mid); font-size: 15px; line-height: 1.5; margin-bottom: 26px; }
+  .onb .field input[type=text] { font-size: 18px; padding: 14px 14px; }
+  .onb .spacer { flex: 1; min-height: 24px; }
+  .onb .dots { display: flex; gap: 6px; margin-bottom: 28px; }
+  .onb .dots i { width: 22px; height: 4px; border-radius: 2px; background: var(--border); }
+  .onb .dots i.on { background: var(--accent); }
+  .onb .ghost { background: none; border: none; color: var(--text-mid); font-size: 14px; padding: 14px; cursor: pointer; width: 100%; margin-top: 6px; }
+  .onb .chips { flex-wrap: wrap; overflow: visible; padding: 0 0 14px; }
+  .onb .sub { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--text-light); margin: 22px 0 10px; }
 </style>
 </head>
 <body>
@@ -224,6 +239,9 @@
   </div>
 </div>
 
+<!-- INICIALIZACIÓN -->
+<div class="onb" id="onb"><div class="onb-in" id="onbBody"></div></div>
+
 <script>
 // ─── CONSTANTES ──────────────────────────────────────────────────
 const LEGACY_AMBITOS = [
@@ -238,7 +256,7 @@ const ACENTOS = ['#e05a5a','#4a8fd4','#3fa66a','#8a6fd1','#d99a1e'];
 const RANK = { alta:0, media:1, baja:2 };
 const K = {
   tasks:'tareas_v2', ambitos:'tareas_ambitos_v1', name:'tareas_username',
-  tema:'tareas_tema', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo',
+  tema:'tareas_tema', onb:'tareas_onboarded', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo',
 };
 
 // ─── ESTADO ──────────────────────────────────────────────────────
@@ -714,11 +732,86 @@ document.addEventListener('keydown', e => {
   closeAdd(); closeSettings();
 });
 
+// ─── INICIALIZACIÓN (primer uso) ─────────────────────────────────
+const SUGERIDOS = ['Casa','Personal','Trabajo','Compras','Estudio','Familia'];
+let onb = { steps:[], i:0, grupos:[] };
+
+function startOnboarding(fresh) {
+  onb = { steps: fresh ? ['nombre','colores','grupos'] : ['nombre','colores'], i:0, grupos:[] };
+  document.getElementById('onb').classList.add('open');
+  renderOnb();
+}
+function onbDots() {
+  return `<div class="dots">${onb.steps.map((_,i) => `<i class="${i<=onb.i?'on':''}"></i>`).join('')}</div>`;
+}
+function renderOnb() {
+  const step = onb.steps[onb.i];
+  const last = onb.i === onb.steps.length - 1;
+  let h = onbDots();
+  if (step === 'nombre') {
+    h += `<h1>Hola 👋</h1><p class="lead">Esta es tu lista de tareas, simple como un papel. ¿Cómo te llamas?</p>
+      <div class="field"><input type="text" id="onbName" placeholder="Tu nombre" value="${esc(userName)}" autocomplete="given-name" onkeydown="if(event.key==='Enter')onbNext()"></div>
+      <div class="spacer"></div><button class="primary" onclick="onbNext()">Continuar</button>`;
+  } else if (step === 'colores') {
+    h += `<h1>Elige tus colores</h1><p class="lead">Puedes cambiarlos cuando quieras en Ajustes.</p>
+      <div class="sub" style="margin-top:0">Modo</div>
+      <div class="seg" id="onbTema">${[['sistema','Automático'],['claro','Claro'],['oscuro','Oscuro']].map(([v,l]) => `<button class="${prefs.tema===v?'on':''}" onclick="onbTema('${v}')">${l}</button>`).join('')}</div>
+      <div class="sub">Color de acento</div>
+      <div class="swatches">${ACENTOS.map(c => `<button class="swatch${prefs.acento===c?' on':''}" style="background:${c}" onclick="onbAcento('${c}')" aria-label="Color ${c}"></button>`).join('')}</div>
+      <div class="spacer"></div><button class="primary" onclick="onbNext()">${last ? 'Empezar' : 'Continuar'}</button>`;
+  } else {
+    h += `<h1>¿Quieres crear grupos?</h1><p class="lead">Los grupos son los ámbitos de tu lista, como secciones del papel. Elige algunos ahora o créalos cuando agregues tareas.</p>
+      <div class="chips">${SUGERIDOS.map(n => `<button class="pill${onb.grupos.includes(n)?' sel':''}" onclick="onbToggleGrupo('${n}')">${n}</button>`).join('')}
+        ${onb.grupos.filter(n => !SUGERIDOS.includes(n)).map(n => `<button class="pill sel" onclick="onbToggleGrupo('${esc(n)}')">${esc(n)}</button>`).join('')}</div>
+      <div class="newg"><input type="text" id="onbNewGroup" placeholder="Otro grupo…" onkeydown="if(event.key==='Enter'){event.preventDefault();onbAddGrupo();}">
+        <button class="send" onclick="onbAddGrupo()" aria-label="Agregar grupo">+</button></div>
+      <div class="spacer"></div>
+      <button class="primary" onclick="onbFinish()">${onb.grupos.length ? 'Crear grupos y empezar' : 'Empezar'}</button>
+      <button class="ghost" onclick="onbFinish(true)">Prefiero definirlos al agregar tareas</button>`;
+  }
+  document.getElementById('onbBody').innerHTML = h;
+  const f = document.getElementById('onbName'); if (f) setTimeout(() => f.focus(), 100);
+}
+function onbNext() {
+  const step = onb.steps[onb.i];
+  if (step === 'nombre') {
+    const v = document.getElementById('onbName').value.trim();
+    if (!v) { document.getElementById('onbName').focus(); return; }
+    userName = v; lsSet(K.name, v);
+  }
+  if (onb.i === onb.steps.length - 1) { onbFinish(true); return; }
+  onb.i++; renderOnb();
+}
+function onbTema(v) { prefs.tema = v; lsSet(K.tema, v); applyTheme(); renderOnb(); }
+function onbAcento(c) { prefs.acento = c; lsSet(K.acento, c); applyTheme(); renderOnb(); }
+function onbToggleGrupo(n) {
+  onb.grupos = onb.grupos.includes(n) ? onb.grupos.filter(x => x !== n) : [...onb.grupos, n];
+  renderOnb();
+}
+function onbAddGrupo() {
+  const inp = document.getElementById('onbNewGroup'); const n = inp.value.trim();
+  if (!n) { inp.focus(); return; }
+  if (!onb.grupos.includes(n)) onb.grupos.push(n);
+  renderOnb(); setTimeout(() => document.getElementById('onbNewGroup').focus(), 50);
+}
+function onbFinish(skipGroups) {
+  if (!skipGroups) onb.grupos.forEach(n => { if (!ambitos.some(a => a.nombre.toLowerCase() === n.toLowerCase())) createGroup(n); });
+  lsSet(K.onb, '1'); save();
+  document.getElementById('onb').classList.remove('open');
+  render();
+}
+
 // ─── INIT ────────────────────────────────────────────────────────
+const esPrimeraVez = lsGet(K.tasks) === null && lsGet(K.ambitos) === null;
 load();
 applyTheme();
 render();
 checkAlarmas();
+if (!lsGet(K.onb)) {
+  if (esPrimeraVez) startOnboarding(true);
+  else if (!userName) startOnboarding(false);
+  else lsSet(K.onb, '1');
+}
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js').catch(() => {});
