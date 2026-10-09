@@ -7,7 +7,8 @@
 //   Authorization: Bearer <ALARM_SECRET>   (QStash lo reenvía desde Upstash-Forward-Authorization)
 
 import { upstash, cmd, keys, validCode, validId, normCode, secretsMatch, parseJSON, fail, noStorage } from '../_store.js';
-import { sendPush, vapidConfigured } from '../_vapid.js';
+import { vapidConfigured } from '../_vapid.js';
+import { deliverPush } from '../_alarms.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -34,16 +35,7 @@ export default async function handler(req, res) {
     // Cancelada, ya mostrada o reprogramada a otra hora: este mensaje quedó viejo.
     if (!entry || entry.shown || entry.at !== at) return res.status(200).json({ ok: true, skipped: true });
 
-    const pushKey = keys.push(code);
-    const flat = await cmd(db, ['HKEYS', pushKey]);
-    const endpoints = Array.isArray(flat) ? flat : [];
-    let delivered = 0;
-    for (const endpoint of endpoints) {
-      const status = await sendPush(endpoint);
-      if (status === 404 || status === 410) await cmd(db, ['HDEL', pushKey, endpoint]);
-      else if (status >= 200 && status < 300) delivered++;
-      else console.error('push rechazado', status, new URL(endpoint).origin);
-    }
+    const delivered = await deliverPush(db, code);
     return res.status(200).json({ ok: true, delivered });
   } catch (err) {
     return fail(res, err);

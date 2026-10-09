@@ -810,7 +810,7 @@ async function enablePush() {
 }
 let syncing = false;
 const ultimoIntento = {};
-const VENTANA_SERVIDOR = 6 * 864e5; // QStash acepta ~7 días (QSTASH_MAX_DELAY_DAYS en el servidor)
+const VENTANA_SERVIDOR = 23 * 3600e3; // QStash gratuito acepta hasta 24 h; las más lejanas las encola el cron diario
 async function syncAlarmas() {
   if (syncing || lsGet(K.push) !== '1') return;
   syncing = true;
@@ -819,7 +819,7 @@ async function syncAlarmas() {
       const al = t.alarma;
       if (!al.activa || al.disparada || al.srv || t.completada) continue;
       const falta = new Date(al.fechaHora) - Date.now();
-      // Muy lejos: el servidor aún no la acepta en la cola. Reintentos espaciados.
+      // Muy lejos: el cron diario del servidor la encola. Aquí solo se reintenta al entrar en la ventana.
       if (falta <= 0 || falta > VENTANA_SERVIDOR || Date.now() - (ultimoIntento[t.id] || 0) < 10 * 60 * 1000) continue;
       ultimoIntento[t.id] = Date.now();
       const r = await fetch(API.alarms, { method:'POST', headers:{ 'Content-Type':'application/json' },

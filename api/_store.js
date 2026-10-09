@@ -6,7 +6,8 @@
 //
 // ── Namespaces ──────────────────────────────────────────────────────────
 //   tareas:push:<code>    hash endpoint → JSON de la suscripción push
-//   tareas:alarm:<code>   hash taskId → { at, titulo, msgId, shown }
+//   tareas:alarm:<code>   hash taskId → { at, titulo, msgId, shown, fired }
+//   tareas:pending        set de códigos con alarmas sin encolar
 //
 // El <code> (32 hex) lo genera cada dispositivo y es su única credencial:
 // quien lo tenga puede ver y programar las alarmas de ese dispositivo. Nada de
@@ -24,7 +25,11 @@ export const TTL = 60 * 60 * 24 * 730;
 
 export const keys = {
   push: (code) => `tareas:push:${code}`,
-  alarm: (code) => `tareas:alarm:${code}`
+  alarm: (code) => `tareas:alarm:${code}`,
+  // Códigos con alguna alarma guardada pero aún sin encolar en QStash (más
+  // lejos que su ventana de 24 h). Lo recorre el cron diario; así no hace
+  // falta SCAN sobre toda la base.
+  pending: 'tareas:pending'
 };
 
 export function upstash() {

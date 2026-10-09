@@ -22,6 +22,8 @@ api/                funciones serverless de Vercel (SIN package.json)
   alarms/schedule.js POST programa / DELETE cancela (vía QStash)
   alarms/fire.js    lo llama QStash a la hora: manda el push vacío
   alarms/due.js     lo llama el service worker: devuelve las alarmas que tocan
+  cron/queue.js     cron diario: encola en QStash las alarmas que entran en su ventana de 24 h
+  _alarms.js        cola de QStash y envío de push compartidos
 tools/vapid-keys.mjs  genera las claves VAPID (se corre a mano)
 diseno/mockup.html  mockup estático del diseño
 ```
@@ -30,6 +32,7 @@ diseno/mockup.html  mockup estático del diseño
 
 - **Sin dependencias npm.** Redis se usa por REST con `fetch` (como `ncs-app`). No agregar `package.json` sin una razón fuerte.
 - **Prefijo de claves `tareas:`** en Redis, y solo ese. Nunca `SCAN`/`FLUSH`: la base puede compartirse.
+- **QStash gratuito solo acepta 24 h de retraso.** Las alarmas más lejanas se guardan sin encolar (índice `tareas:pending`) y el cron diario de Vercel las encola. Hobby permite un cron por día, con jitter de hasta una hora: por eso corre a las 07:00 UTC (de madrugada en Chile).
 - **Push sin payload**: el service worker pide los títulos a `/api/alarms/due`. Cada push debe terminar en una notificación visible (iOS lo exige).
 - Los errores del servidor van a `console.error`; al navegador solo un mensaje genérico.
 - El código de dispositivo (`tareas_codigo`, 32 hex) es la única credencial. Se genera en el dispositivo; nunca se muestra ni se registra.

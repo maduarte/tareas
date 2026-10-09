@@ -63,15 +63,15 @@ Requiere backend, así que incluye la migración a Vercel.
    - [x] `api/push/subscribe.js`: guarda la suscripción de cada persona.
    - [x] `api/alarms/schedule.js`: POST guarda la alarma y la programa en QStash (`Upstash-Not-Before`); DELETE la cancela al editar o borrar la tarea.
    - [x] `api/alarms/fire.js`: lo llama QStash; valida el secreto (`Upstash-Forward-Authorization` + `secretsMatch()`), comprueba que la alarma siga vigente y envía un push vacío firmado con VAPID (JWT ES256 con `crypto.subtle`).
+   - [x] `api/cron/queue.js` + `crons` en `vercel.json` (ventana de 24 h de QStash).
    - [x] `api/alarms/due.js`: lo llama el service worker tras el push; devuelve las alarmas vencidas y las marca como disparadas.
 3. **Cliente**
    - [x] Suscribirse con `pushManager.subscribe`; llamar a `schedule` al guardar o editar y a DELETE al borrar.
    - [x] `sw.js`: handler `push` (fetch a `due` y `showNotification`; si falla, notificación genérica "Tienes una alarma". En iOS cada push debe mostrar una notificación).
-4. **Variables de entorno en Vercel**: `UPSTASH_REDIS_REST_*`, `QSTASH_TOKEN`, claves VAPID, `ALARM_SECRET`, `TAREAS_ORIGIN`.
+4. **Variables de entorno en Vercel**: `UPSTASH_REDIS_REST_*`, `QSTASH_TOKEN`, claves VAPID, `ALARM_SECRET`, `CRON_SECRET`, `TAREAS_ORIGIN`.
 
 ### Fase C: solo si hace falta
 - Sync de tareas entre dispositivos de la misma persona (`api/sync.js` por código, copiado de ncs-app) y badge de estado. Se hace si alguien usa la app en más de un dispositivo.
-- Cron diario de Vercel para reprogramar alarmas más lejanas que el límite de QStash.
 
 ## Decisiones
 
@@ -84,7 +84,8 @@ Requiere backend, así que incluye la migración a Vercel.
 
 ```
 tareas:push:<code>    suscripción(es) push                                   TTL 2 años
-tareas:alarm:<code>   hash taskId → { at, titulo, qstashMsgId, fired }       TTL 2 años
+tareas:alarm:<code>   hash taskId → { at, titulo, msgId, shown, fired }         TTL 2 años
+tareas:pending        set de códigos con alarmas sin encolar (lo recorre el cron)
 tareas:sync:<code>    (solo Fase C) blob con tareas + grupos                 TTL 2 años
 ```
 
@@ -93,7 +94,7 @@ Los datos de `push` y `alarm` nunca viajan al cliente tal cual; el cliente solo 
 ## Riesgos y puntos abiertos
 
 - **iOS**: Web Push solo funciona con la app instalada en la pantalla de inicio (iOS 16.4+). Conviene saber qué dispositivos usan las 2 o 3 personas.
-- **Retraso máximo de QStash en el plan gratuito**: verificar en su documentación (creo que son unos 7 días).
+- **QStash gratuito: retraso máximo de 24 h** (dato confirmado por el usuario; 1000 mensajes por día). Las alarmas más lejanas se guardan sin encolar y un **cron diario de Vercel** (`api/cron/queue.js`, 07:00 UTC) las encola al entrar en la ventana. El plan Hobby corre el cron con hasta una hora de jitter; si una alarma venció sin encolarse, el cron manda el push de inmediato como rescate.
 - **Código de sync como credencial**: quien lo tenga puede ver y programar alarmas. Aceptable aquí por el alcance y la ausencia de datos sensibles.
 - **Plan Hobby de Vercel**: solo uso no comercial; encaja con un grupo cercano.
 - **Permisos**: cada persona debe aceptar notificaciones y reinstalar la PWA en el dominio nuevo.

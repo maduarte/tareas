@@ -5,30 +5,15 @@
 //   DELETE /api/alarms/schedule?code=<32hex>&taskId=<id>       → { ok }
 //
 // La entrega la hace QStash: llama a /api/alarms/fire a la hora exacta, sin
-// cron ni sondeo. `queued:false` significa que la alarma quedó guardada pero
-// más lejos que el retraso máximo de QStash; el cliente la vuelve a enviar
-// más cerca de la fecha.
+// sondeo. QStash solo acepta hasta 24 h de retraso, así que una alarma más
+// lejana queda guardada con `queued:false` y el cron diario (api/cron/queue.js)
+// la encola cuando entra en la ventana. El cliente también la reenvía al
+// acercarse la fecha.
 
 import { upstash, cmd, keys, TTL, validCode, validId, normCode, origin, parseJSON, fail, noStorage } from '../_store.js';
+import { cancelMessage, queueAlarm, withinWindow } from '../_alarms.js';
 
-const QSTASH = 'https://qstash.upstash.io/v2';
 const MAX_ALARMS = 200;
-const MAX_DELAY_DAYS = Number(process.env.QSTASH_MAX_DELAY_DAYS) || 7;
-
-async function qstash(path, init = {}) {
-  const res = await fetch(`${QSTASH}${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${process.env.QSTASH_TOKEN}`, ...(init.headers || {}) }
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.error || `QStash ${res.status}`);
-  return json;
-}
-
-async function cancelMessage(entry) {
-  if (!entry || !entry.msgId) return;
-  try { await qstash(`/messages/${entry.msgId}`, { method: 'DELETE' }); } catch (e) { /* ya entregado o inexistente */ }
-}
 
 export default async function handler(req, res) {
   const db = upstash();
@@ -68,20 +53,9 @@ export default async function handler(req, res) {
     await cancelMessage(previous);
 
     const entry = { at: new Date(when).toISOString(), titulo: titulo.trim().slice(0, 200), msgId: null, shown: false };
-    const queued = when - Date.now() <= MAX_DELAY_DAYS * 864e5;
-    if (queued) {
-      const sent = await qstash(`/publish/${origin(req)}/api/alarms/fire`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Upstash-Not-Before': String(Math.floor(when / 1000)),
-          'Upstash-Retries': '2',
-          'Upstash-Forward-Authorization': `Bearer ${process.env.ALARM_SECRET}`
-        },
-        body: JSON.stringify({ code, taskId, at: entry.at })
-      });
-      entry.msgId = sent.messageId || null;
-    }
+    const queued = withinWindow(when);
+    if (queued) entry.msgId = await queueAlarm(origin(req), code, taskId, entry);
+    else await cmd(db, ['SADD', keys.pending, code]);
     await cmd(db, ['HSET', key, taskId, JSON.stringify(entry)]);
     await cmd(db, ['EXPIRE', key, TTL]);
     return res.status(200).json({ ok: true, queued });
