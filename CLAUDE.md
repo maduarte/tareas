@@ -32,6 +32,7 @@ diseno/mockup.html  mockup estático del diseño
 
 - **Sin dependencias npm.** Redis se usa por REST con `fetch` (como `ncs-app`). No agregar `package.json` sin una razón fuerte.
 - **Prefijo de claves `tareas:`** en Redis, y solo ese. Nunca `SCAN`/`FLUSH`: la base puede compartirse.
+- **QStash es multi-región**: cada cuenta vive en una región y debe usar su URL regional (`QSTASH_URL`); con el endpoint global falla con "user not found in this region".
 - **QStash gratuito solo acepta 24 h de retraso.** Las alarmas más lejanas se guardan sin encolar (índice `tareas:pending`) y el cron diario de Vercel las encola. Hobby permite un cron por día, con jitter de hasta una hora: por eso corre a las 07:00 UTC (de madrugada en Chile).
 - **Push sin payload**: el service worker pide los títulos a `/api/alarms/due`. Cada push debe terminar en una notificación visible (iOS lo exige).
 - Los errores del servidor van a `console.error`; al navegador solo un mensaje genérico.

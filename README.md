@@ -8,7 +8,7 @@ Lista de tareas personal construida como PWA (Progressive Web App): una sola pá
 - Todas las tareas se muestran ordenadas por grupo, en secciones plegables (el estado plegado se recuerda).
 - Cada tarea es una línea. A la derecha solo aparece lo que hayas configurado: punto de urgencia, plazo y alarma.
 - Completar una tarea la tacha y la baja al final de su grupo. **Al terminar el día las completadas se borran** (no hay archivo).
-- Filtro **Todas / HOY**.
+- Filtro **Todas / HOY**. Al abrir la app se muestra HOY.
 
 ### Detalle opcional
 Al tocar una línea se despliega en el mismo lugar, en este orden:

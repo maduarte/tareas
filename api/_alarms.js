@@ -12,7 +12,10 @@
 import { cmd, keys, parseJSON } from './_store.js';
 import { sendPush } from './_vapid.js';
 
-const QSTASH = 'https://qstash.upstash.io/v2';
+// Upstash tiene QStash en varias regiones y cada cuenta vive en una: hay que usar
+// la URL regional que muestra su consola (QSTASH_URL). Sin esa variable se usa
+// el endpoint global, que solo atiende a las cuentas de su región por defecto.
+const QSTASH = (process.env.QSTASH_URL || 'https://qstash.upstash.io').replace(/\/$/, '') + '/v2';
 const MAX_HOURS = Number(process.env.QSTASH_MAX_DELAY_HOURS) || 24;
 export const WINDOW_MS = MAX_HOURS * 3600e3 - 5 * 60e3;
 
