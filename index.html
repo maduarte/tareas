@@ -749,6 +749,9 @@ function checkAlarmas() {
     if (!al.activa || al.disparada || t.completada) return;
     const due = new Date(al.fechaHora).getTime();
     if (due > now) return;
+    // Encolada en el servidor: el push es quien avisa (con la app abierta o cerrada).
+    // Avisar también desde aquí repetiría la notificación al abrir la app.
+    if (al.srv) { al.disparada = true; changed = true; return; }
     const puedeAvisar = 'Notification' in window && Notification.permission === 'granted';
     if (now - due > ALARMA_TOLERANCIA || !puedeAvisar) al.perdida = true;
     else dispararAlarma(t);

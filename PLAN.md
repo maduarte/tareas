@@ -1,6 +1,6 @@
 # Plan: alarmas confiables y despliegue en Vercel
 
-Estado: **Fases A y A2 implementadas; B y C pendientes**. Basado en `../ncs-app`, que ya resuelve en Vercel + Upstash Redis problemas parecidos (código de sync, namespaces, TTL).
+Estado: **Fases A, A2 y B implementadas y probadas con la app cerrada en un dispositivo real (9-oct-2026); quedan los pasos de migración de la Fase B y la Fase C.** Basado en `../ncs-app`, que ya resuelve en Vercel + Upstash Redis problemas parecidos (código de sync, namespaces, TTL).
 
 ## Contexto y alcance
 
