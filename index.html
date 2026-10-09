@@ -147,6 +147,13 @@
   .hint { font-size: 12px; color: var(--text-light); margin-top: 8px; line-height: 1.5; }
   .primary { font-family: var(--font); font-size: 15px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: 12px; padding: 13px 22px; cursor: pointer; width: 100%; }
 
+  /* ─── Alarmas que no sonaron ─── */
+  .missed { margin: 10px 20px 0; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); }
+  .missed .mh { display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .missed .mi { display: flex; gap: 10px; padding: 7px 0; font-size: 15px; cursor: pointer; }
+  .missed .mi span:first-child { flex: 1; min-width: 0; word-break: break-word; }
+  .missed .mi span:last-child { font-size: 12px; color: var(--text-mid); flex: none; padding-top: 2px; }
+
   /* ─── Inicialización (primer uso) ─── */
   .onb { position: fixed; inset: 0; z-index: 300; background: var(--bg); display: none; overflow-y: auto; }
   .onb.open { display: block; }
@@ -304,7 +311,7 @@ function normalize() {
     enHoy: !!t.enHoy,
     hoyManual: t.hoyManual === undefined ? true : !!t.hoyManual,
     completada: !!t.completada, completadaEn: t.completadaEn || null,
-    alarma: t.alarma && t.alarma.activa && t.alarma.fechaHora ? { activa:true, fechaHora:t.alarma.fechaHora, disparada:!!t.alarma.disparada } : { activa:false, fechaHora:null, disparada:false },
+    alarma: t.alarma && t.alarma.activa && t.alarma.fechaHora ? { activa:true, fechaHora:t.alarma.fechaHora, disparada:!!t.alarma.disparada, perdida:!!t.alarma.perdida } : { activa:false, fechaHora:null, disparada:false },
     manual: !!t.manual,
     fechaCreacion: t.fechaCreacion || new Date().toISOString(),
     orden: typeof t.orden === 'number' ? t.orden : 0,
@@ -404,7 +411,26 @@ function render() {
   } else if (scope === 'todas' && !tasks.length) {
     html += `<div class="empty"><b>Sin tareas</b>Toca + para agregar la primera.</div>`;
   }
-  document.getElementById('list').innerHTML = html;
+  document.getElementById('list').innerHTML = missedHTML() + html;
+}
+
+function missedList() {
+  return tasks.filter(t => t.alarma.activa && t.alarma.perdida && !t.completada)
+    .sort((a,b) => new Date(a.alarma.fechaHora) - new Date(b.alarma.fechaHora));
+}
+function missedHTML() {
+  const m = missedList();
+  if (!m.length) return '';
+  return `<div class="missed"><div class="mh"><span>🔔 ${m.length === 1 ? 'Una alarma no sonó' : m.length + ' alarmas no sonaron'}</span>
+    <button class="linkbtn" onclick="dismissMissed()">Entendido</button></div>
+    ${m.map(t => `<div class="mi" onclick="openMissed('${t.id}')"><span>${esc(t.titulo)}</span><span>${fmtLong(t.alarma.fechaHora)}</span></div>`).join('')}</div>`;
+}
+function dismissMissed() { missedList().forEach(t => t.alarma.perdida = false); save(); render(); }
+function openMissed(id) {
+  const t = T(id); if (!t) return;
+  t.alarma.perdida = false; scope = 'todas'; openId = id; plegados.delete(t.ambito);
+  save(); render();
+  const r = document.querySelector(`.row[data-id="${id}"]`); if (r) r.scrollIntoView({ block:'center', behavior:'smooth' });
 }
 
 function metaHTML(t) {
@@ -496,7 +522,7 @@ function setWhen(id, kind, val) {
   const iso = new Date(val).toISOString();
   if (kind === 'plazo') { t.deadline = iso; applyHoyDefault(t); }
   else {
-    t.alarma = { activa:true, fechaHora:iso, disparada:false };
+    t.alarma = { activa:true, fechaHora:iso, disparada:false, perdida:false };
     if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
   }
   save(); render();
@@ -699,15 +725,23 @@ function applyTheme() {
 if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 
 // ─── ALARMAS ─────────────────────────────────────────────────────
+// Una alarma que se detecta tarde (app cerrada o dormida) ya no sirve como
+// notificación: queda en el aviso de arriba para que no se pierda en silencio.
+const ALARMA_TOLERANCIA = 2 * 60 * 1000;
 function checkAlarmas() {
   const now = Date.now();
   let changed = false;
   tasks.forEach(t => {
-    if (t.alarma.activa && !t.alarma.disparada && !t.completada && new Date(t.alarma.fechaHora).getTime() <= now) {
-      dispararAlarma(t); t.alarma.disparada = true; changed = true;
-    }
+    const al = t.alarma;
+    if (!al.activa || al.disparada || t.completada) return;
+    const due = new Date(al.fechaHora).getTime();
+    if (due > now) return;
+    const puedeAvisar = 'Notification' in window && Notification.permission === 'granted';
+    if (now - due > ALARMA_TOLERANCIA || !puedeAvisar) al.perdida = true;
+    else dispararAlarma(t);
+    al.disparada = true; changed = true;
   });
-  if (changed) save();
+  if (changed) { save(); render(); }
 }
 async function dispararAlarma(task) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
