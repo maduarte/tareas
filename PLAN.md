@@ -94,7 +94,7 @@ Los datos de `push` y `alarm` nunca viajan al cliente tal cual; el cliente solo 
 ## Riesgos y puntos abiertos
 
 - **iOS**: Web Push solo funciona con la app instalada en la pantalla de inicio (iOS 16.4+). Conviene saber qué dispositivos usan las 2 o 3 personas.
-- **QStash gratuito: retraso máximo de 24 h** (dato confirmado por el usuario; 1000 mensajes por día). Las alarmas más lejanas se guardan sin encolar y un **cron diario de Vercel** (`api/cron/queue.js`, 07:00 UTC) las encola al entrar en la ventana. El plan Hobby corre el cron con hasta una hora de jitter; si una alarma venció sin encolarse, el cron manda el push de inmediato como rescate.
+- **QStash gratuito: retraso máximo de 24 h** (dato confirmado por el usuario; 1000 mensajes por día). Las alarmas más lejanas se guardan sin encolar y un **cron diario de Vercel** (`api/cron/queue.js`, 07:00 UTC) las encola al entrar en la ventana (24 h menos 5 min, para no dejar huecos entre corridas). El plan Hobby corre el cron con hasta una hora de jitter; si una alarma venció sin encolarse, el cron manda el push de inmediato como rescate.
 - **Código de sync como credencial**: quien lo tenga puede ver y programar alarmas. Aceptable aquí por el alcance y la ausencia de datos sensibles.
 - **Plan Hobby de Vercel**: solo uso no comercial; encaja con un grupo cercano.
 - **Permisos**: cada persona debe aceptar notificaciones y reinstalar la PWA en el dominio nuevo.

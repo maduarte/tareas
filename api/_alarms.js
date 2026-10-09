@@ -3,15 +3,18 @@
 //
 // QStash (plan gratuito) solo acepta mensajes con hasta 24 h de retraso. Una
 // alarma más lejana se guarda sin encolar (msgId null) y el cron diario
-// (api/cron/queue.js) la encola cuando entra en la ventana. Para que un cron
-// que corre con unos minutos de jitter no deje huecos, el margen es de 1 h.
+// (api/cron/queue.js) la encola cuando entra en la ventana. El cron corre una
+// vez al día, así que la ventana debe ser casi las 24 h completas: con menos,
+// una alarma que a la hora del cron queda entre la ventana y las 24 h ya no
+// entra en esa corrida y en la siguiente suena tarde (rescate). El margen de
+// 5 min cubre el tiempo de ida y vuelta hasta QStash.
 
 import { cmd, keys, parseJSON } from './_store.js';
 import { sendPush } from './_vapid.js';
 
 const QSTASH = 'https://qstash.upstash.io/v2';
 const MAX_HOURS = Number(process.env.QSTASH_MAX_DELAY_HOURS) || 24;
-export const WINDOW_MS = Math.max(1, MAX_HOURS - 1) * 3600e3;
+export const WINDOW_MS = MAX_HOURS * 3600e3 - 5 * 60e3;
 
 export const withinWindow = (atMs) => atMs - Date.now() <= WINDOW_MS;
 
