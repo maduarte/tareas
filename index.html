@@ -89,12 +89,15 @@
   .detail { padding: 2px 0 14px 36px; display: flex; flex-direction: column; gap: 12px; }
   .drow { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-light); min-height: 30px; }
   .drow .k { width: 62px; flex: none; }
-  .pill { position: relative; overflow: hidden; display: inline-block; background: var(--chip); color: var(--text-mid); padding: 6px 12px; border-radius: 999px; font-size: 13px; border: 1px solid transparent; cursor: pointer; font-family: var(--font); }
+  .pill { position: relative; display: inline-block; background: var(--chip); color: var(--text-mid); padding: 6px 12px; border-radius: 999px; font-size: 13px; border: 1px solid transparent; cursor: pointer; font-family: var(--font); }
   .pill.add { background: none; border: 1px dashed var(--border); color: var(--text-light); }
   .pill.set { background: var(--accent-soft); color: var(--accent); }
   .pill.sel { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
-  /* El input cubre la píldora (opacity 0) para abrir el selector nativo; overflow:hidden en .pill evita que iOS lo agrande sobre la ✕ */
-  .whenin { position: absolute; inset: 0; width: 100%; height: 100%; min-width: 0; max-width: 100%; opacity: 0; cursor: pointer; font-size: 16px; -webkit-appearance: none; appearance: none; }
+  /* Campo de fecha visible con botón OK: no se guarda mientras el selector está abierto (iOS dispara `change` al abrirlo y en cada giro de la rueda, y redibujar lo cerraba) */
+  .whenedit { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; flex-wrap: wrap; }
+  .dtin { font-family: var(--font); font-size: 16px; color: var(--text); background: var(--chip); border: 1.5px solid transparent; border-radius: 10px; padding: 6px 8px; min-width: 0; max-width: 100%; }
+  .dtin.bad { border-color: var(--alta); }
+  .okbtn { font-family: var(--font); font-size: 14px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
   .xbtn { position: relative; z-index: 2; background: none; border: none; color: var(--text-light); font-size: 15px; cursor: pointer; padding: 8px 12px; margin: -4px 0; }
   .urg { display: flex; gap: 10px; }
   .urg button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; opacity: .35; cursor: pointer; }
@@ -261,8 +264,11 @@
     <p class="hint" id="alWhen" style="margin:0 0 16px"></p>
     <div class="btnrow">
       <button class="btn2" onclick="snoozeMinutes(10)">Posponer 10 min</button>
-      <span class="btn2" style="position:relative;overflow:hidden;display:inline-block">Elegir hora
-        <input type="datetime-local" class="whenin" onclick="try{this.showPicker()}catch(e){}" onchange="snoozeAt(this.value)"></span>
+      <button class="btn2" onclick="showSnoozePick()">Elegir hora</button>
+    </div>
+    <div class="whenedit" id="alPick" style="display:none;margin-top:14px">
+      <input type="datetime-local" class="dtin" id="alInput">
+      <button class="okbtn" onclick="snoozeFromPick()">Posponer</button>
     </div>
     <div style="margin-top:16px"><button class="primary" onclick="doneFromSheet()">Hecho</button></div>
   </div>
@@ -297,6 +303,7 @@ let plegados = new Set();
 let scope = 'hoy';
 let openId = null;
 let confirmDelId = null;
+let editWhen = null; // { id, kind } mientras se edita Alarma o Plazo
 let addGroup = null;
 
 // ─── STORAGE ─────────────────────────────────────────────────────
@@ -480,10 +487,17 @@ function rowHTML(t) {
   </div>`;
 }
 
+// Fecha por defecto del campo: la hora siguiente en punto
+function nextHourLocal() { const d = new Date(); d.setMinutes(0,0,0); d.setHours(d.getHours() + 1); return isoToLocal(d.toISOString()); }
+
 function whenField(kind, iso, id) {
+  if (editWhen && editWhen.id === id && editWhen.kind === kind) {
+    return `<span class="whenedit"><input type="datetime-local" class="dtin" id="whenInput" value="${iso ? isoToLocal(iso) : nextHourLocal()}">
+      <button class="okbtn" onclick="commitWhen('${id}','${kind}')">OK</button>
+      <button class="xbtn" onclick="cancelWhen()" aria-label="Cancelar">✕</button></span>`;
+  }
   const label = iso ? fmtLong(iso) : '+ agregar';
-  return `<span class="pill ${iso?'set':'add'}">${label}<input type="datetime-local" class="whenin" value="${iso?isoToLocal(iso):''}"
-      onclick="try{this.showPicker()}catch(e){}" onchange="setWhen('${id}','${kind}',this.value)"></span>`
+  return `<button class="pill ${iso?'set':'add'}" onclick="startWhen('${id}','${kind}')">${label}</button>`
     + (iso ? `<button class="xbtn" onclick="clearWhen('${id}','${kind}')" aria-label="Quitar">✕</button>` : '');
 }
 
@@ -513,11 +527,11 @@ function openRowHTML(t) {
 // ─── ACCIONES ────────────────────────────────────────────────────
 const T = id => tasks.find(x => x.id === id);
 
-function setScope(s) { scope = s; openId = null; render(); }
+function setScope(s) { scope = s; openId = null; editWhen = null; render(); }
 function toggleGroup(id) { plegados.has(id) ? plegados.delete(id) : plegados.add(id); savePlegados(); render(); }
 function toggleOpen(id) {
   if (justDragged) return;
-  openId = openId === id ? null : id; confirmDelId = null; render();
+  openId = openId === id ? null : id; confirmDelId = null; editWhen = null; render();
 }
 function toggleComplete(id, e) {
   if (e) e.stopPropagation();
@@ -539,6 +553,17 @@ function setPrio(id, p) {
 function setGroupOf(id, gid) {
   const t = T(id); if (!t) return;
   t.ambito = gid; t.manual = false; placeByRule(t); save(); render();
+}
+function startWhen(id, kind) { editWhen = { id, kind }; render(); }
+function cancelWhen() { editWhen = null; render(); }
+function commitWhen(id, kind) {
+  const inp = document.getElementById('whenInput');
+  const val = inp && inp.value;
+  if (!val) { cancelWhen(); return; }
+  // Una alarma en el pasado no sirve: se marca el campo y se deja corregir
+  if (kind === 'alarma' && new Date(val) <= Date.now()) { inp.classList.add('bad'); return; }
+  editWhen = null;
+  setWhen(id, kind, val);
 }
 function setWhen(id, kind, val) {
   const t = T(id); if (!t || !val) return;
@@ -882,7 +907,21 @@ function openAlarmSheet(id) {
   document.getElementById('alWhen').textContent = t.alarma.activa ? 'Alarma de ' + fmtLong(t.alarma.fechaHora) : '';
   document.getElementById('alOverlay').classList.add('open');
 }
-function closeAlarmSheet() { document.getElementById('alOverlay').classList.remove('open'); alId = null; }
+function closeAlarmSheet() {
+  document.getElementById('alOverlay').classList.remove('open');
+  document.getElementById('alPick').style.display = 'none';
+  alId = null;
+}
+function showSnoozePick() {
+  document.getElementById('alInput').value = nextHourLocal();
+  document.getElementById('alInput').classList.remove('bad');
+  document.getElementById('alPick').style.display = 'flex';
+}
+function snoozeFromPick() {
+  const inp = document.getElementById('alInput');
+  if (!inp.value || new Date(inp.value) <= Date.now()) { inp.classList.add('bad'); return; }
+  snoozeAt(inp.value);
+}
 function snoozeMinutes(min) { snoozeAt(new Date(Date.now() + min * 60000).toISOString(), true); }
 function snoozeAt(val, isIso) {
   const t = T(alId); if (!t || !val) return;

@@ -37,6 +37,7 @@ diseno/mockup.html  mockup estático del diseño
 - **Push sin payload**: el service worker pide los títulos a `/api/alarms/due`. Cada push debe terminar en una notificación visible (iOS lo exige).
 - **Posponer:** la notificación lleva `data:{taskId,titulo}` y una acción `snooze10`. El service worker reprograma en el servidor y deja el cambio en `tareas-meta` (`/__snooze`); la app lo aplica a la tarea al abrirse. Tocar la notificación abre `./?alarma=<id>` o manda un mensaje al cliente abierto, y la app muestra la hoja de alarma.
 - **Sonido:** no es controlable desde la web (lo fija el sistema); no prometer sonidos propios ni tonos persistentes.
+- **Campos de fecha (`datetime-local`) en iOS:** dispara `change` al abrir el selector (con la hora actual) y en cada giro de la rueda. Nunca guardar ni redibujar en `change`: se destruye el input y el selector se cierra. El flujo actual muestra el campo visible y confirma con un botón OK (`startWhen`/`commitWhen`, `snoozeFromPick`).
 - Los errores del servidor van a `console.error`; al navegador solo un mensaje genérico.
 - El código de dispositivo (`tareas_codigo`, 32 hex) es la única credencial. Se genera en el dispositivo; nunca se muestra ni se registra.
 - Al cambiar `sw.js` o la lista de archivos precacheados, subir `CACHE`.
