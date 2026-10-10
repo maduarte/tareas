@@ -12,8 +12,8 @@ Lista de tareas personal construida como PWA (Progressive Web App): una sola pá
 
 ### Detalle opcional
 Al tocar una línea se despliega en el mismo lugar, en este orden:
-- **Alarma**: notificación a la hora elegida.
-- **Plazo**: fecha y hora límite (se marca en rojo si venció).
+- **Alarma**: notificación a la hora elegida. Atajos de un toque: *En 10 min*, *Hoy 18:00* (si aún no pasó) y *Mañana 9:00*; *Otra…* abre el selector de fecha y hora.
+- **Plazo**: fecha y hora límite (se marca en rojo si venció). Atajos: *Mañana 18:00*, *En 3 días* y *En 1 semana* (a las 18:00); *Otra…* abre el selector.
 - **Urgencia**: alta (rojo), media (amarillo) o baja (verde). Sin urgencia por defecto.
 - **Grupo**: cambiar la tarea de grupo.
 - **HOY**: marca la tarea para el filtro HOY. Se activa por defecto en las tareas sin plazo; al ponerle plazo se desactiva, salvo que la hayas cambiado a mano.

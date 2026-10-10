@@ -264,6 +264,7 @@
     <p class="hint" id="alWhen" style="margin:0 0 16px"></p>
     <div class="btnrow">
       <button class="btn2" onclick="snoozeMinutes(10)">Posponer 10 min</button>
+      <button class="btn2" onclick="snoozeTomorrow()">Mañana 9:00</button>
       <button class="btn2" onclick="showSnoozePick()">Elegir hora</button>
     </div>
     <div class="whenedit" id="alPick" style="display:none;margin-top:14px">
@@ -405,7 +406,8 @@ function placeByRule(t) {
 function applyHoyDefault(t) { if (!t.hoyManual) t.enHoy = !t.deadline; }
 
 function groupRows(gid) {
-  const inScope = t => t.ambito === gid && (scope === 'todas' || t.enHoy);
+  // La tarea abierta se mantiene a la vista aunque deje de estar en HOY (por ejemplo, al ponerle un Plazo)
+  const inScope = t => t.ambito === gid && (scope === 'todas' || t.enHoy || t.id === openId);
   const pend = tasks.filter(t => inScope(t) && !t.completada).sort(byOrden);
   const done = tasks.filter(t => inScope(t) && t.completada).sort((a,b) => new Date(a.completadaEn) - new Date(b.completadaEn));
   return { pend, done };
@@ -490,10 +492,24 @@ function rowHTML(t) {
 // Fecha por defecto del campo: la hora siguiente en punto
 function nextHourLocal() { const d = new Date(); d.setMinutes(0,0,0); d.setHours(d.getHours() + 1); return isoToLocal(d.toISOString()); }
 
+// Atajos de un toque. "Hoy 18:00" solo se ofrece si todavía no pasó.
+function presets(kind) {
+  const at = (dias, h) => { const d = new Date(); d.setDate(d.getDate() + dias); d.setHours(h, 0, 0, 0); return d; };
+  const list = kind === 'alarma'
+    ? [{ label:'En 10 min', d:new Date(Date.now() + 10 * 60000) }, { label:'Hoy 18:00', d:at(0, 18) }, { label:'Mañana 9:00', d:at(1, 9) }]
+    : [{ label:'Mañana 18:00', d:at(1, 18) }, { label:'En 3 días', d:at(3, 18) }, { label:'En 1 semana', d:at(7, 18) }];
+  return list.filter(x => x.d > Date.now());
+}
+
 function whenField(kind, iso, id) {
   if (editWhen && editWhen.id === id && editWhen.kind === kind) {
-    return `<span class="whenedit"><input type="datetime-local" class="dtin" id="whenInput" value="${iso ? isoToLocal(iso) : nextHourLocal()}">
-      <button class="okbtn" onclick="commitWhen('${id}','${kind}')">OK</button>
+    if (editWhen.custom) {
+      return `<span class="whenedit"><input type="datetime-local" class="dtin" id="whenInput" value="${iso ? isoToLocal(iso) : nextHourLocal()}">
+        <button class="okbtn" onclick="commitWhen('${id}','${kind}')">OK</button>
+        <button class="xbtn" onclick="cancelWhen()" aria-label="Cancelar">✕</button></span>`;
+    }
+    return `<span class="whenedit">${presets(kind).map((x,i) => `<button class="pill" onclick="applyPreset('${id}','${kind}',${i})">${x.label}</button>`).join('')}
+      <button class="pill add" onclick="customWhen()">Otra…</button>
       <button class="xbtn" onclick="cancelWhen()" aria-label="Cancelar">✕</button></span>`;
   }
   const label = iso ? fmtLong(iso) : '+ agregar';
@@ -554,7 +570,13 @@ function setGroupOf(id, gid) {
   const t = T(id); if (!t) return;
   t.ambito = gid; t.manual = false; placeByRule(t); save(); render();
 }
-function startWhen(id, kind) { editWhen = { id, kind }; render(); }
+function startWhen(id, kind) { editWhen = { id, kind, custom:false }; render(); }
+function customWhen() { editWhen.custom = true; render(); }
+function applyPreset(id, kind, i) {
+  const x = presets(kind)[i]; if (!x) return;
+  editWhen = null;
+  setWhen(id, kind, x.d.toISOString(), true);
+}
 function cancelWhen() { editWhen = null; render(); }
 function commitWhen(id, kind) {
   const inp = document.getElementById('whenInput');
@@ -565,9 +587,9 @@ function commitWhen(id, kind) {
   editWhen = null;
   setWhen(id, kind, val);
 }
-function setWhen(id, kind, val) {
+function setWhen(id, kind, val, isIso) {
   const t = T(id); if (!t || !val) return;
-  const iso = new Date(val).toISOString();
+  const iso = isIso ? val : new Date(val).toISOString();
   if (kind === 'plazo') { t.deadline = iso; applyHoyDefault(t); }
   else {
     t.alarma = { activa:true, fechaHora:iso, disparada:false, perdida:false };
@@ -922,6 +944,7 @@ function snoozeFromPick() {
   if (!inp.value || new Date(inp.value) <= Date.now()) { inp.classList.add('bad'); return; }
   snoozeAt(inp.value);
 }
+function snoozeTomorrow() { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); snoozeAt(d.toISOString(), true); }
 function snoozeMinutes(min) { snoozeAt(new Date(Date.now() + min * 60000).toISOString(), true); }
 function snoozeAt(val, isIso) {
   const t = T(alId); if (!t || !val) return;
