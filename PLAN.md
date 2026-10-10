@@ -31,7 +31,7 @@ Mockup de referencia: [diseno/mockup.html](diseno/mockup.html). La app pasa a se
 - **Grupos como secciones**, siempre ordenadas por grupo: título en versalitas con punto de color, contador de pendientes, plegables (▾ / ▸). El estado plegado se recuerda entre sesiones.
 - **Agregar**: botón flotante + abajo a la derecha (uso con una mano). Abre una hoja con el teclado activo y chips de grupo; el grupo actual (o el último usado) queda preseleccionado, así que toda tarea tiene grupo.
 - **Detalle opcional** al tocar la línea (se despliega en el lugar), en este orden: **Alarma, Plazo, Urgencia**. Lo no configurado se ve como "+ agregar". Ningún detalle se pide por defecto.
-- **HOY**: marca por tarea, rotulada solo "HOY" en mayúscula (también en el filtro Todas / HOY). **Se activa por defecto si la tarea no tiene Plazo.**
+- **HOY**: marca por tarea, rotulada solo "HOY" en mayúscula (también en el filtro Todas / HOY). **Las tareas nuevas entran en HOY por defecto y poner un Plazo no la quita** (se cambió el 9-oct-2026: la regla "HOY solo si no hay Plazo" no funcionó en el uso real; quitar HOY es siempre manual).
 - **Urgencia**: punto de color a la derecha (rojo, amarillo, verde); sin punto = sin urgencia.
 - **Orden dentro de cada grupo**: manual (arrastrar). Las urgentes suben solas por regla, pero **cualquier orden manual prevalece sobre la regla**: las tareas nuevas se ubican según urgencia, y una tarea movida a mano conserva su posición aunque cambie su urgencia. Pendiente de confirmar: el arrastre solo se limita si el usuario no lo ha fijado antes.
 - **Completar**: círculo relleno y texto tachado en gris, al final del grupo. **Desaparecen al terminar el día y se borran de verdad** (no hay archivo): al abrir la app un día distinto al que se completaron, se eliminan. Sin temporizador.
@@ -46,7 +46,7 @@ Mockup de referencia: [diseno/mockup.html](diseno/mockup.html). La app pasa a se
 - [x] Regla de orden: urgentes arriba salvo orden manual; guardar si una tarea tiene posición manual.
 - [x] Borrado de completadas al cambiar de día.
 - [x] Tema claro/oscuro con variables CSS y `prefers-color-scheme`.
-- [x] HOY por defecto cuando no hay Plazo; renombrar "Fecha" a "Plazo" (también en README).
+- [x] HOY por defecto en las tareas nuevas (sin importar el Plazo); renombrar "Fecha" a "Plazo" (también en README).
 - [x] Migración de datos: las tareas existentes conservan campos; las completadas viejas se borran en la primera carga.
 
 ### Fase B: alarmas con la app cerrada (futuro cercano)

@@ -339,7 +339,6 @@ function normalize() {
     prioridad: t.prioridad in RANK ? t.prioridad : null,
     deadline: t.deadline || null,
     enHoy: !!t.enHoy,
-    hoyManual: t.hoyManual === undefined ? true : !!t.hoyManual,
     completada: !!t.completada, completadaEn: t.completadaEn || null,
     alarma: t.alarma && t.alarma.activa && t.alarma.fechaHora ? { activa:true, fechaHora:t.alarma.fechaHora, disparada:!!t.alarma.disparada, perdida:!!t.alarma.perdida, srv:!!t.alarma.srv } : { activa:false, fechaHora:null, disparada:false },
     manual: !!t.manual,
@@ -403,7 +402,6 @@ function placeByRule(t) {
   list.splice(idx, 0, t);
   list.forEach((x,i) => x.orden = i * 10);
 }
-function applyHoyDefault(t) { if (!t.hoyManual) t.enHoy = !t.deadline; }
 
 function groupRows(gid) {
   // La tarea abierta se mantiene a la vista aunque deje de estar en HOY (por ejemplo, al ponerle un Plazo)
@@ -438,7 +436,7 @@ function render() {
   if (!ambitos.length) {
     html = `<div class="empty"><b>Aún no hay tareas</b>Toca + para agregar la primera.<br>Podrás crear grupos al agregarla.</div>`;
   } else if (scope === 'hoy' && !shown) {
-    html = `<div class="empty"><b>Nada marcado para HOY</b>Las tareas sin plazo quedan en HOY por defecto.</div>`;
+    html = `<div class="empty"><b>Nada marcado para HOY</b>Las tareas nuevas quedan en HOY por defecto.</div>`;
   } else if (scope === 'todas' && !tasks.length) {
     html += `<div class="empty"><b>Sin tareas</b>Toca + para agregar la primera.</div>`;
   }
@@ -558,7 +556,7 @@ function toggleComplete(id, e) {
   if (t.completada) { cancelAlarm(id); t.alarma.srv = false; } else syncAlarmas();
   save(); render();
 }
-function toggleHoy(id) { const t = T(id); if (!t) return; t.enHoy = !t.enHoy; t.hoyManual = true; save(); render(); }
+function toggleHoy(id) { const t = T(id); if (!t) return; t.enHoy = !t.enHoy; save(); render(); }
 function setTitle(id, v) { const t = T(id); v = v.trim(); if (!t || !v) { render(); return; } t.titulo = v; if (t.alarma.activa) { t.alarma.srv = false; delete ultimoIntento[id]; } save(); syncAlarmas(); }
 function setPrio(id, p) {
   const t = T(id); if (!t) return;
@@ -590,7 +588,7 @@ function commitWhen(id, kind) {
 function setWhen(id, kind, val, isIso) {
   const t = T(id); if (!t || !val) return;
   const iso = isIso ? val : new Date(val).toISOString();
-  if (kind === 'plazo') { t.deadline = iso; applyHoyDefault(t); }
+  if (kind === 'plazo') t.deadline = iso;
   else {
     t.alarma = { activa:true, fechaHora:iso, disparada:false, perdida:false };
     delete ultimoIntento[id];
@@ -602,7 +600,7 @@ function setWhen(id, kind, val, isIso) {
 }
 function clearWhen(id, kind) {
   const t = T(id); if (!t) return;
-  if (kind === 'plazo') { t.deadline = null; applyHoyDefault(t); }
+  if (kind === 'plazo') t.deadline = null;
   else { t.alarma = { activa:false, fechaHora:null, disparada:false }; cancelAlarm(id); }
   save(); render();
 }
@@ -715,7 +713,7 @@ function submitAdd() {
   }
   const t = {
     id:uid(), titulo, ambito:addGroup, prioridad:null, deadline:null,
-    enHoy:true, hoyManual:false, completada:false, completadaEn:null,
+    enHoy:true, completada:false, completadaEn:null,
     alarma:{ activa:false, fechaHora:null, disparada:false }, manual:false,
     fechaCreacion:new Date().toISOString(), orden:0,
   };
