@@ -1,6 +1,6 @@
 # Plan: alarmas confiables y despliegue en Vercel
 
-Estado: **Fases A, A2 y B implementadas y probadas con la app cerrada en un dispositivo real (9-oct-2026); quedan los pasos de migración de la Fase B y la Fase C.** Basado en `../ncs-app`, que ya resuelve en Vercel + Upstash Redis problemas parecidos (código de sync, namespaces, TTL).
+Estado: **Fases A, A2 y B completas y probadas con la app cerrada en un dispositivo real (9-oct-2026). Solo queda la Fase C, opcional.** Basado en `../ncs-app`, que ya resuelve en Vercel + Upstash Redis problemas parecidos (código de sync, namespaces, TTL).
 
 ## Contexto y alcance
 
@@ -55,8 +55,8 @@ Requiere backend, así que incluye la migración a Vercel.
 1. **Migración a Vercel**
    - [x] Proyecto en Vercel, `vercel.json` copiado de ncs-app (`cleanUrls`, rewrite `/api/*`, headers de seguridad).
    - [x] `manifest.json`: `start_url` y `scope` a `/`.
-   - [ ] Migrar los datos de cada persona: exportar JSON desde `maduarte.github.io`, importar en el dominio nuevo (otro origen, otro `localStorage`).
-   - [ ] Retirar GitHub Pages o dejar una redirección con aviso.
+   - [x] ~~Migrar los datos de cada persona~~: no es necesario (decisión del usuario, 9-oct-2026). Exportar/Importar JSON sigue disponible en Ajustes.
+   - [x] GitHub Pages redirige a la app: rama `gh-pages` (solo `index.html`/`404.html` de redirección) y fuente de Pages apuntada a ella. `main` solo se despliega en Vercel.
    - [x] `CLAUDE.md` y un `privacidad.html` breve.
 2. **Backend de alarmas**, sin dependencias npm, igual que ncs-app: Upstash por REST con `fetch`, helpers en `api/_store.js`.
    - [x] Claves VAPID (script en `tools/`).
@@ -75,6 +75,8 @@ Requiere backend, así que incluye la migración a Vercel.
 - [x] Vibración y `requireInteraction` en las notificaciones. El sonido no es configurable desde la web: lo decide el teléfono.
 
 ### Fase C: solo si hace falta
+- Probar una alarma a más de 24 h para verificar el cron diario de las 07:00 UTC en condiciones reales.
+- Probar en iPhone (instalada en la pantalla de inicio) si alguien lo usa.
 - Sync de tareas entre dispositivos de la misma persona (`api/sync.js` por código, copiado de ncs-app) y badge de estado. Se hace si alguien usa la app en más de un dispositivo.
 
 ## Decisiones
