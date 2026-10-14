@@ -1196,7 +1196,11 @@ function importJSON(input) {
       const d = JSON.parse(r.result);
       if (!Array.isArray(d.tasks) || !Array.isArray(d.ambitos)) throw 0;
       if (!confirm(`Esto reemplaza tus datos actuales por ${d.tasks.length} tareas y ${d.ambitos.length} grupos. ¿Continuar?`)) return;
-      tasks = d.tasks; ambitos = d.ambitos; normalize(); save(); renderSettings(); render();
+      tasks = d.tasks; ambitos = d.ambitos; normalize();
+      // Las alarmas del respaldo se programaron con el código de otro dispositivo (o de una instalación
+      // anterior): se vuelven a programar con el de este
+      tasks.forEach(t => { if (t.alarma.activa) { t.alarma.srv = false; delete ultimoIntento[t.id]; } });
+      save(); renderSettings(); render(); syncAlarmas();
     } catch(e) { alert('El archivo no es un respaldo válido de ToDoi.'); }
   };
   r.readAsText(file);
