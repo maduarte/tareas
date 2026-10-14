@@ -102,15 +102,18 @@ Inspirada en Things 3. Nada de esto está construido; son decisiones por tomar a
 - **Un solo campo de fecha** con hora opcional («programada»). Las alarmas existentes se migran a «programada con hora».
 - **Lo programado a futuro queda visible** en Todas (con su fecha) y en la vista de próximos; no se oculta como en Things.
 - **Regla de HOY con prioridad:** una tarea nueva o editada con fecha programada *futura* no entra en HOY; en cualquier otro caso (sin fecha, o fecha de hoy) sí entra automáticamente. El día programado entra sola en HOY. Quitar la fecha no cambia si está en HOY.
-- **Detector de duplicados:** al crear o programar una tarea, comparar su título con las demás pendientes (sin tildes ni mayúsculas, por palabras en común) y avisar si hay una muy parecida, sobre todo si está programada en otra fecha. Solo avisa, no bloquea, y se puede descartar.
-- **Aviso diario de plazos sin planificar:** al abrir la app la primera vez cada día, listar las tareas que tienen Plazo en la ventana de «mañana» y no están programadas ni en HOY, para elegir cuáles activar hoy.
-  - La ventana de «mañana» es hasta el *siguiente día hábil*: si hoy es viernes (o sábado/domingo), incluye sábado a lunes; el resto de la semana, solo mañana.
+- **Detector de duplicados:** al crear o programar una tarea, estimar la probabilidad de que sea duplicado de otra pendiente y avisar si supera un umbral, sobre todo si está programada en otra fecha. Solo avisa, no bloquea, y se puede descartar. Cada respuesta del usuario («es duplicado» / «no lo es») es una etiqueta para mejorar la estimación.
+  - v1: puntaje a mano (palabras en común sin tildes ni mayúsculas, similitud de letras, mismo grupo, fechas cercanas) con umbral estricto y memoria de las parejas ya descartadas.
+  - v2: el mismo puntaje como **regresión logística** entrenada en el propio dispositivo con las etiquetas (pocos parámetros, unas decenas de líneas de JS, sin dependencias). Parte de pesos a mano y los ajusta poco a poco.
+  - Descartado por ahora: red neuronal o modelo de embeddings. Con un solo usuario habrá cientos de etiquetas al año, muy pocas para entrenarla, y un modelo de lenguaje en el navegador pesa decenas de MB y rompe el «sin dependencias».
+- **Aviso diario de plazos sin planificar:** solo la primera apertura de cada día (no vuelve a salir al reabrir), listar las tareas que tienen Plazo en la ventana de «mañana» y no están programadas ni en HOY, para elegir cuáles activar hoy.
+  - La ventana de «mañana» es hasta el *siguiente día hábil*, con días hábiles de lunes a viernes fijos: si hoy es viernes (o sábado/domingo), incluye sábado a lunes; el resto de la semana, solo mañana. El fin de semana solo se trabaja para ponerse al día, no se programa.
   - Cada tarea del aviso se activa con un toque (entra en HOY) o se descarta por hoy.
 
 **Decisiones abiertas**
-- Qué cuenta como día hábil: lunes a viernes fijo, o configurable. Los feriados quedan fuera de esta fase.
-- Cuán parecido es «muy parecido» para el detector (umbral de palabras en común) y cuándo avisa si ya se descartó una vez la misma pareja.
-- Si el aviso diario se muestra de nuevo al volver a la app durante el día, o solo la primera vez; propuesta: solo la primera vez y con acceso desde la vista de próximos.
+- Los feriados quedan fuera de esta fase.
+- Umbral inicial del detector y qué señales entran en el puntaje de v1.
+- Dónde se vuelve a consultar el aviso diario ya descartado (propuesta: desde la vista de próximos).
 - Impacto: `sw.js` y `api/alarms/*` siguen igual (la hora sigue siendo un push); cambian el modelo de datos de `index.html`, el README y, opcionalmente, el widget (la instantánea podría llevar también lo de mañana).
 
 ### Fase C: pendiente de uso real
