@@ -4,3 +4,6 @@
 .DS_Store
 # Capturas del panel de Vercel/Upstash para diagnóstico: pueden mostrar cuentas y proyectos
 screenshots/
+
+# Binario del widget de escritorio (se compila con widget/build.sh)
+widget/build/
