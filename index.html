@@ -132,6 +132,7 @@
   .newg { display: flex; gap: 8px; padding-top: 10px; }
   .newg input[type=text], .field input[type=text] { flex: 1; font-family: var(--font); font-size: 16px; color: var(--text); background: var(--chip); border: none; border-radius: 10px; padding: 10px 12px; outline: none; min-width: 0; }
   .newg input[type=color], .field input[type=color] { width: 44px; height: 40px; border: none; background: none; padding: 0; cursor: pointer; }
+  .adddetail { padding: 10px 0 0; gap: 8px; }
   .flash { font-size: 12px; color: var(--baja); height: 16px; padding-top: 6px; }
 
   /* ─── Ajustes ─── */
@@ -205,6 +206,7 @@
       <input type="text" id="newGroupName" placeholder="Nombre del grupo" onkeydown="if(event.key==='Enter'){event.preventDefault();createGroupFromSheet();}">
       <button class="send" onclick="createGroupFromSheet()" aria-label="Crear grupo">✓</button>
     </div>
+    <div class="detail adddetail" id="addDetails"></div>
     <div class="flash" id="addFlash"></div>
     <div style="text-align:right"><button class="linkbtn" onclick="closeAdd()">Cerrar</button></div>
   </div>
@@ -306,6 +308,8 @@ let openId = null;
 let confirmDelId = null;
 let editWhen = null; // { id, kind } mientras se edita Alarma o Plazo
 let addGroup = null;
+let addDraft = null; // detalles opcionales de la tarea que se está escribiendo
+let addEdit = null;  // { kind, custom } mientras se elige Alarma o Plazo en la hoja
 
 // ─── STORAGE ─────────────────────────────────────────────────────
 function lsGet(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }
@@ -673,6 +677,8 @@ function openAdd() {
   document.getElementById('addInput').value = '';
   document.getElementById('addFlash').textContent = '';
   document.getElementById('newGroupName').value = '';
+  addDraft = { alarma:null, deadline:null, prioridad:null, enHoy:true }; addEdit = null;
+  renderAddDetails();
   renderChips(!ambitos.length);
   document.getElementById('addOverlay').classList.add('open');
   setTimeout(() => document.getElementById('addInput').focus(), 150);
@@ -684,6 +690,39 @@ function renderChips(showNew) {
     + `<button class="pill add" onclick="toggleNewGroup()">+ grupo</button>`;
   document.getElementById('newGroupRow').style.display = showNew ? 'flex' : 'none';
   if (showNew) document.getElementById('newGroupName').placeholder = ambitos.length ? 'Nombre del grupo' : 'Primer grupo (ej. Casa)';
+}
+function addWhenField(kind, iso) {
+  if (addEdit && addEdit.kind === kind) {
+    if (addEdit.custom) {
+      return `<span class="whenedit"><input type="datetime-local" class="dtin" id="addWhenInput" value="${iso ? isoToLocal(iso) : nextHourLocal()}">
+        <button class="okbtn" onclick="addCommitWhen('${kind}')">OK</button>
+        <button class="xbtn" onclick="addCancelWhen()" aria-label="Cancelar">✕</button></span>`;
+    }
+    return `<span class="whenedit">${presets(kind).map((x,i) => `<button class="pill" onclick="addPreset('${kind}',${i})">${x.label}</button>`).join('')}
+      <button class="pill add" onclick="addEdit.custom=true;renderAddDetails()">Otra…</button>
+      <button class="xbtn" onclick="addCancelWhen()" aria-label="Cancelar">✕</button></span>`;
+  }
+  return `<button class="pill ${iso?'set':'add'}" onclick="addEdit={kind:'${kind}',custom:false};renderAddDetails()">${iso ? fmtLong(iso) : '+ agregar'}</button>`
+    + (iso ? `<button class="xbtn" onclick="addSetWhen('${kind}',null)" aria-label="Quitar">✕</button>` : '');
+}
+function renderAddDetails() {
+  const d = addDraft; if (!d) return;
+  const urg = ['alta','media','baja'].map(p =>
+    `<button class="${d.prioridad===p?'sel':''}" style="background:var(--${p})" onclick="addDraft.prioridad=addDraft.prioridad==='${p}'?null:'${p}';renderAddDetails()" aria-label="Urgencia ${p}"></button>`).join('');
+  document.getElementById('addDetails').innerHTML = `
+    <div class="drow"><span class="k">Alarma</span>${addWhenField('alarma', d.alarma)}</div>
+    <div class="drow"><span class="k">Plazo</span>${addWhenField('plazo', d.deadline)}</div>
+    <div class="drow"><span class="k">Urgencia</span><span class="urg">${urg}</span></div>
+    <div class="drow"><span class="k">Hoy</span><button class="pill hoy${d.enHoy?' on':''}" onclick="addDraft.enHoy=!addDraft.enHoy;renderAddDetails()">HOY</button></div>`;
+}
+function addSetWhen(kind, iso) { addDraft[kind === 'alarma' ? 'alarma' : 'deadline'] = iso; addEdit = null; renderAddDetails(); }
+function addPreset(kind, i) { const x = presets(kind)[i]; if (x) addSetWhen(kind, x.d.toISOString()); }
+function addCancelWhen() { addEdit = null; renderAddDetails(); }
+function addCommitWhen(kind) {
+  const inp = document.getElementById('addWhenInput'); const val = inp && inp.value;
+  if (!val) { addCancelWhen(); return; }
+  if (kind === 'alarma' && new Date(val) <= Date.now()) { inp.classList.add('bad'); return; }
+  addSetWhen(kind, new Date(val).toISOString());
 }
 function pickGroup(id) { addGroup = id; renderChips(false); document.getElementById('addInput').focus(); }
 function toggleNewGroup() {
@@ -712,15 +751,17 @@ function submitAdd() {
     if (g.value.trim()) createGroupFromSheet(); else { renderChips(true); g.focus(); return; }
   }
   const t = {
-    id:uid(), titulo, ambito:addGroup, prioridad:null, deadline:null,
-    enHoy:true, completada:false, completadaEn:null,
-    alarma:{ activa:false, fechaHora:null, disparada:false }, manual:false,
+    id:uid(), titulo, ambito:addGroup, prioridad:addDraft.prioridad, deadline:addDraft.deadline,
+    enHoy:addDraft.enHoy, completada:false, completadaEn:null,
+    alarma:{ activa:!!addDraft.alarma, fechaHora:addDraft.alarma, disparada:false }, manual:false,
     fechaCreacion:new Date().toISOString(), orden:0,
   };
   tasks.push(t); placeByRule(t);
   plegados.delete(addGroup); savePlegados();
   lsSet(K.ultimo, addGroup);
   save(); render();
+  if (t.alarma.activa) enablePush().then(syncAlarmas);
+  addDraft = { alarma:null, deadline:null, prioridad:null, enHoy:true }; addEdit = null; renderAddDetails();
   inp.value = ''; inp.focus();
   const f = document.getElementById('addFlash'); f.textContent = '✓ Agregada en ' + getAmbito(addGroup).nombre;
   setTimeout(() => { if (f.textContent.startsWith('✓')) f.textContent = ''; }, 1800);
