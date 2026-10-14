@@ -98,6 +98,8 @@
   .dtin { font-family: var(--font); font-size: 16px; color: var(--text); background: var(--chip); border: 1.5px solid transparent; border-radius: 10px; padding: 6px 8px; min-width: 0; max-width: 100%; }
   .dtin.bad { border-color: var(--alta); }
   .okbtn { font-family: var(--font); font-size: 14px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+  .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); max-width: calc(100% - 32px); background: var(--text); color: var(--bg); font-size: 14px; padding: 10px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50; text-align: center; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
   .xbtn { position: relative; z-index: 2; background: none; border: none; color: var(--text-light); font-size: 15px; cursor: pointer; padding: 8px 12px; margin: -4px 0; }
   .urg { display: flex; gap: 10px; }
   .urg button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; opacity: .35; cursor: pointer; }
@@ -259,6 +261,8 @@
 </div>
 
 <!-- ALARMA (se abre al tocar la notificación) -->
+<div class="toast" id="toast" role="status"></div>
+
 <div class="overlay" id="alOverlay" onclick="if(event.target===this)closeAlarmSheet()">
   <div class="sheet">
     <div class="grab"></div>
@@ -545,11 +549,25 @@ function openRowHTML(t) {
 // ─── ACCIONES ────────────────────────────────────────────────────
 const T = id => tasks.find(x => x.id === id);
 
-function setScope(s) { scope = s; openId = null; editWhen = null; render(); }
+let toastTimer;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+// El campo de fecha no guarda hasta tocar OK: si se sale con otra hora elegida, avisar.
+function discardWhen() {
+  if (!editWhen || !editWhen.custom) return;
+  const inp = document.getElementById('whenInput'), t = T(editWhen.id);
+  if (!inp || !inp.value || !t) return;
+  const saved = editWhen.kind === 'alarma' ? (t.alarma.activa ? t.alarma.fechaHora : null) : t.deadline;
+  if (inp.value !== (saved ? isoToLocal(saved) : editWhen.orig)) toast('No se guardó la hora: toca OK para confirmar');
+}
+function setScope(s) { discardWhen(); scope = s; openId = null; editWhen = null; render(); }
 function toggleGroup(id) { plegados.has(id) ? plegados.delete(id) : plegados.add(id); savePlegados(); render(); }
 function toggleOpen(id) {
   if (justDragged) return;
-  openId = openId === id ? null : id; confirmDelId = null; editWhen = null; render();
+  discardWhen(); openId = openId === id ? null : id; confirmDelId = null; editWhen = null; render();
 }
 function toggleComplete(id, e) {
   if (e) e.stopPropagation();
@@ -572,8 +590,8 @@ function setGroupOf(id, gid) {
   const t = T(id); if (!t) return;
   t.ambito = gid; t.manual = false; placeByRule(t); save(); render();
 }
-function startWhen(id, kind) { editWhen = { id, kind, custom:false }; render(); }
-function customWhen() { editWhen.custom = true; render(); }
+function startWhen(id, kind) { discardWhen(); editWhen = { id, kind, custom:false }; render(); }
+function customWhen() { editWhen.custom = true; editWhen.orig = nextHourLocal(); render(); }
 function applyPreset(id, kind, i) {
   const x = presets(kind)[i]; if (!x) return;
   editWhen = null;
