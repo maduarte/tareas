@@ -1,6 +1,6 @@
 # Plan: alarmas confiables y despliegue en Vercel
 
-Estado: **Fases A, A2 y B completas y probadas con la app cerrada en un dispositivo real (9-oct-2026). Lo único abierto es verificar el cron diario con una alarma lejana.** Basado en `../ncs-app`, que ya resuelve en Vercel + Upstash Redis problemas parecidos (código de sync, namespaces, TTL).
+Estado: **Fases A, A2 y B completas y probadas con la app cerrada en un dispositivo real (9-oct-2026). El cron diario también quedó verificado.** Basado en `../ncs-app`, que ya resuelve en Vercel + Upstash Redis problemas parecidos (código de sync, namespaces, TTL).
 
 ## Contexto y alcance
 
@@ -88,7 +88,7 @@ Widget de **solo lectura** con la lista de HOY, al fondo del escritorio. Marcar 
 ### Fase C: pendiente de uso real
 - ~~Sync de tareas entre dispositivos~~: **descartado** (decisión del usuario, 9-oct-2026). Cada dispositivo guarda sus propias tareas.
 - ~~Probar en iPhone~~: **hecho**. Todas las pruebas se hicieron en iPhone (instalada en la pantalla de inicio).
-- [ ] Verificar el cron diario de las 07:00 UTC con una alarma a más de 24 h (en curso: el usuario dejó una alarma lejana activada el 9-oct-2026). Si suena, no queda nada pendiente.
+- [x] Cron diario de las 07:00 UTC verificado con una alarma a más de 24 h (sonó correctamente; confirmado por el usuario el 14-oct-2026).
 
 ## Decisiones
 
