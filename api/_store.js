@@ -8,6 +8,7 @@
 //   tareas:push:<code>    hash endpoint → JSON de la suscripción push
 //   tareas:alarm:<code>   hash taskId → { at, titulo, msgId, shown, fired }
 //   tareas:pending        set de códigos con alarmas sin encolar
+//   tareas:snap:<token>   instantánea de HOY para el widget del Mac (solo lectura)
 //
 // El <code> (32 hex) lo genera cada dispositivo y es su única credencial:
 // quien lo tenga puede ver y programar las alarmas de ese dispositivo. Nada de
@@ -18,6 +19,7 @@
 
 const CODE_RE = /^[a-f0-9]{32}$/;
 const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+const TOKEN_RE = /^[a-f0-9]{64}$/;
 
 // Privacidad: 2 años sin uso → los datos expiran. Cada escritura reinicia la
 // cuenta, así que quien use la app no los pierde.
@@ -29,7 +31,8 @@ export const keys = {
   // Códigos con alguna alarma guardada pero aún sin encolar en QStash (más
   // lejos que su ventana de 24 h). Lo recorre el cron diario; así no hace
   // falta SCAN sobre toda la base.
-  pending: 'tareas:pending'
+  pending: 'tareas:pending',
+  snap: (token) => `tareas:snap:${token}`
 };
 
 export function upstash() {
@@ -54,6 +57,15 @@ export async function cmd(db, args) {
 export const validCode = (code) => CODE_RE.test(String(code || '').trim().toLowerCase());
 export const validId = (id) => ID_RE.test(String(id || ''));
 export const normCode = (code) => String(code || '').trim().toLowerCase();
+export const validToken = (t) => TOKEN_RE.test(String(t || '').trim().toLowerCase());
+
+// Token de solo lectura derivado del código: SHA-256 no se puede invertir, así
+// que quien lo tenga puede leer la instantánea pero no escribir ni deducir el
+// código. El cliente calcula lo mismo (index.html, readToken) para mostrarlo.
+export async function readToken(code) {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('tareas-lectura:' + code));
+  return Array.from(new Uint8Array(d), b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // Origen público de la app. TAREAS_ORIGIN manda en producción (VERCEL_URL
 // cambia en cada preview).

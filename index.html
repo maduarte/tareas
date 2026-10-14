@@ -249,6 +249,12 @@
     </div>
 
     <div class="sec">
+      <h3>Widget del Mac</h3>
+      <p class="hint" id="widgetInfo" style="margin:0 0 10px"></p>
+      <div class="btnrow"><button class="btn2" id="widgetBtn" onclick="toggleWidget()"></button><button class="btn2" id="widgetCopy" onclick="copyWidgetToken()" style="display:none">Copiar código de lectura</button></div>
+    </div>
+
+    <div class="sec">
       <h3>Datos</h3>
       <div class="btnrow">
         <button class="btn2" onclick="exportJSON()">↓ Exportar</button>
@@ -298,7 +304,7 @@ const ACENTOS = ['#e05a5a','#4a8fd4','#3fa66a','#8a6fd1','#d99a1e'];
 const RANK = { alta:0, media:1, baja:2 };
 const K = {
   tasks:'tareas_v2', ambitos:'tareas_ambitos_v1', name:'tareas_username',
-  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo',
+  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', widget:'tareas_widget', snapPend:'tareas_widget_pend', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo',
 };
 
 // ─── ESTADO ──────────────────────────────────────────────────────
@@ -334,6 +340,7 @@ function load() {
 function save() {
   lsSet(K.tasks, JSON.stringify(tasks));
   lsSet(K.ambitos, JSON.stringify(ambitos));
+  queueSnapshot();
 }
 function savePlegados() { lsSet(K.plegados, JSON.stringify([...plegados])); }
 
@@ -815,6 +822,7 @@ function renderSettings() {
   }).join('') : '<p class="hint">Aún no hay grupos.</p>';
   document.getElementById('setNewColor').value = nextColor();
   renderPushInfo();
+  renderWidgetInfo();
 }
 function saveName(v) { userName = v.trim(); lsSet(K.name, userName); render(); }
 function setTema(v) { prefs.tema = v; lsSet(K.tema, v); applyTheme(); renderSettings(); }
@@ -980,6 +988,69 @@ async function onPushBtn() {
   if (ok) syncAlarmas();
 }
 
+// ─── WIDGET DEL MAC (solo lectura) ───────────────────────────────
+// Si está activo, cada cambio sube una instantánea de HOY (título, grupo,
+// urgencia, plazo) que el widget del Mac lee con un código de solo lectura
+// derivado del código del dispositivo. Ver PLAN.md, Fase D.
+const SNAP_API = '/api/snapshot';
+const widgetOn = () => lsGet(K.widget) === '1';
+let snapTimer = null, snapSending = false, snapLast = '';
+async function readToken() {
+  const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('tareas-lectura:' + syncCode()));
+  return Array.from(new Uint8Array(d), b => b.toString(16).padStart(2, '0')).join('');
+}
+function snapshotBody() {
+  const f = new Date(), p = n => String(n).padStart(2, '0');
+  const items = [];
+  ambitos.forEach(a => tasks.filter(t => t.ambito === a.id && t.enHoy && !t.completada).sort(byOrden)
+    .forEach(t => items.push({ titulo:t.titulo, grupo:a.nombre, urgencia:t.prioridad || null, plazo:t.deadline || null })));
+  return JSON.stringify({ code:syncCode(), fecha:`${f.getFullYear()}-${p(f.getMonth()+1)}-${p(f.getDate())}`, items });
+}
+// Con retraso para agrupar cambios seguidos; si no llega al servidor queda pendiente y se reintenta
+function queueSnapshot() {
+  if (!widgetOn()) return;
+  if (snapBodyUnchanged()) return;
+  lsSet(K.snapPend, '1');
+  clearTimeout(snapTimer); snapTimer = setTimeout(sendSnapshot, 1500);
+}
+const snapBodyUnchanged = () => snapshotBody() === snapLast && lsGet(K.snapPend) !== '1';
+async function sendSnapshot() {
+  snapTimer = null;
+  if (!widgetOn() || snapSending) return;
+  snapSending = true;
+  const body = snapshotBody();
+  try {
+    const r = await fetch(SNAP_API, { method:'POST', headers:{ 'Content-Type':'application/json' }, body });
+    if (r.ok) { snapLast = body; lsSet(K.snapPend, '0'); }
+  } catch(e) { /* sin red: queda pendiente */ }
+  snapSending = false;
+}
+function retrySnapshot() { if (widgetOn() && lsGet(K.snapPend) === '1' && !snapTimer) sendSnapshot(); }
+window.addEventListener('online', retrySnapshot);
+async function toggleWidget() {
+  if (widgetOn()) {
+    lsSet(K.widget, '0'); lsSet(K.snapPend, '0'); snapLast = '';
+    fetch(`${SNAP_API}?code=${syncCode()}`, { method:'DELETE' }).catch(() => {});
+  } else {
+    lsSet(K.widget, '1'); lsSet(K.snapPend, '1'); sendSnapshot();
+  }
+  renderWidgetInfo();
+}
+async function renderWidgetInfo() {
+  const on = widgetOn();
+  document.getElementById('widgetInfo').textContent = on
+    ? 'Activo: este dispositivo publica la lista de HOY (título, grupo, urgencia y plazo) para el widget del Mac. Copia el código de lectura y pégalo en el widget. Solo permite leer.'
+    : 'Publica la lista de HOY en el servidor para verla en el widget del Mac. Es de solo lectura; marcar tareas se hace aquí.';
+  document.getElementById('widgetBtn').textContent = on ? 'Desactivar' : 'Activar';
+  document.getElementById('widgetCopy').style.display = on ? '' : 'none';
+}
+async function copyWidgetToken() {
+  const b = document.getElementById('widgetCopy');
+  try { await navigator.clipboard.writeText(await readToken()); b.textContent = 'Copiado'; }
+  catch(e) { b.textContent = 'No se pudo copiar'; }
+  setTimeout(() => { b.textContent = 'Copiar código de lectura'; }, 2000);
+}
+
 // ─── HOJA DE ALARMA: posponer / hecho ────────────────────────────
 let alId = null;
 function openAlarmSheet(id) {
@@ -1040,6 +1111,7 @@ if ('serviceWorker' in navigator) {
 }
 
 function tick() {
+  retrySnapshot();
   applyPendingSnoozes();
   syncAlarmas();
   checkAlarmas();
@@ -1126,6 +1198,7 @@ function onbFinish(skipGroups) {
 // ─── INIT ────────────────────────────────────────────────────────
 const esPrimeraVez = lsGet(K.tasks) === null && lsGet(K.ambitos) === null;
 load();
+queueSnapshot();
 applyTheme();
 render();
 checkAlarmas();

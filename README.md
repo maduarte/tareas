@@ -40,6 +40,9 @@ Modo claro y oscuro (automático según el sistema, o fijo), con cinco colores d
 - **Posponer:** al tocar la notificación se abre una hoja con *Posponer 10 min*, *Elegir hora* y *Hecho*. En Android y Chrome de escritorio la notificación trae además un botón *Posponer 10 min* que funciona sin abrir la app (iOS no muestra botones en notificaciones web).
 - **Sonido:** lo decide el teléfono, no la app. En iPhone: Ajustes → Notificaciones → Tareas; en Android: ajustes de notificaciones del navegador o de la app instalada. Desde la web solo se controla la vibración (Android) y que la notificación no se cierre sola (escritorio).
 
+### Widget del Mac (opcional)
+Ajustes → «Widget del Mac» publica la lista de HOY (título, grupo, urgencia y plazo) con cada cambio. El widget de escritorio ([widget/](widget/)) la lee con un código de solo lectura que se copia desde ahí; no permite marcar tareas.
+
 ### Datos
 - **Exportar** e **Importar** un respaldo JSON desde Ajustes.
 
@@ -63,6 +66,8 @@ Datos guardados en `localStorage`, aislados por dispositivo y navegador (no se s
 | `tareas_onboarded` | El primer uso ya se completó |
 | `tareas_codigo` | Código aleatorio del dispositivo (identifica sus alarmas en el servidor) |
 | `tareas_push` | `1` si este dispositivo activó el push |
+| `tareas_widget` | `1` si este dispositivo publica la lista de HOY para el widget del Mac |
+| `tareas_widget_pend` | `1` si hay una instantánea sin subir (se reintenta) |
 
 ## Estructura del proyecto
 

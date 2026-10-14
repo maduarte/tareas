@@ -24,6 +24,8 @@ api/                funciones serverless de Vercel (SIN package.json)
   alarms/due.js     lo llama el service worker: devuelve las alarmas que tocan
   cron/queue.js     cron diario: encola en QStash las alarmas que entran en su ventana de 24 h
   _alarms.js        cola de QStash y envío de push compartidos
+  snapshot.js       POST/GET/DELETE de la instantánea de HOY para el widget del Mac (lectura por token derivado)
+widget/             widget de escritorio para Mac (Swift/AppKit, sin Xcode): build.sh, install.sh, uninstall.sh
 tools/vapid-keys.mjs  genera las claves VAPID (se corre a mano)
 diseno/mockup.html  mockup estático del diseño
 ```
