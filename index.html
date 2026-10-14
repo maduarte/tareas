@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="ToDoi">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" id="appleIcon" href="apple-touch-icon.png">
 <link rel="icon" href="icon-192.png">
 <meta name="theme-color" id="metaTheme" content="#f8f7f5">
 <style>
@@ -1214,6 +1214,9 @@ function applyTheme() {
   else root.removeAttribute('data-theme');
   root.style.setProperty('--accent', prefs.acento);
   document.getElementById('metaTheme').content = getComputedStyle(root).getPropertyValue('--bg').trim();
+  // iOS fija el ícono al «Agregar a inicio»: en modo oscuro se ofrece el ícono oscuro
+  const oscuro = prefs.tema === 'oscuro' || (prefs.tema === 'sistema' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.getElementById('appleIcon').href = oscuro ? 'apple-touch-icon-oscuro.png' : 'apple-touch-icon.png';
 }
 if (window.matchMedia) matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 

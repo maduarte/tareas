@@ -16,6 +16,7 @@ SERIF = {
     '-baskerville': {'ruta': SU + 'Baskerville.ttc', 'idx': 4},
 }
 CLARO, OSCURO = ('#2a2a2a', '#e05a5a', '#f8f7f5'), ('#ecebe8', '#ec6f6f', '#1b1a19')
+ICONO_OSCURO = ('#0d0d0d', '#e05a5a')    # ícono para modo oscuro: fondo negro, 'o' blanca, trazo rojo
 
 for suf, spec in SERIF.items():
     if not os.path.exists(spec['ruta']):
@@ -27,6 +28,7 @@ for suf, spec in SERIF.items():
     info = marca.marca(f, '#2a2a2a', '#e05a5a')[2]
     open(OUT + f'icono{suf}-tinta.svg', 'w').write(marca.icono(info, '#2a2a2a'))
     open(OUT + f'icono{suf}-blanco.svg', 'w').write(marca.icono(info, '#fff'))
+    open(OUT + f'icono{suf}-oscuro.svg', 'w').write(marca.icono(info, ICONO_OSCURO[1], accent=ICONO_OSCURO[0]))
 
 # ── Para la app ──────────────────────────────────────────────────
 import re, shutil, subprocess, tempfile
@@ -51,13 +53,19 @@ if '<!--marca-->' in html:
 info = marca.marca(f, '#2a2a2a', '#e05a5a')[2]
 if shutil.which('qlmanage') and shutil.which('sips'):
     tmp = tempfile.mkdtemp()
-    src = os.path.join(tmp, 'icono.svg')
-    open(src, 'w').write(marca.icono(info, '#fff', size=1024, rx=0))
-    subprocess.run(['qlmanage', '-t', '-s', '1024', '-o', tmp, src], capture_output=True)
-    png = src + '.png'
-    for nombre, lado in (('icon-512.png', 512), ('icon-192.png', 192), ('apple-touch-icon.png', 180)):
+    variantes = {
+        'claro': marca.icono(info, '#fff', size=1024, rx=0),
+        'oscuro': marca.icono(info, ICONO_OSCURO[1], accent=ICONO_OSCURO[0], size=1024, rx=0),
+    }
+    salidas = (('claro', 'icon-512.png', 512), ('claro', 'icon-192.png', 192), ('claro', 'apple-touch-icon.png', 180),
+               ('oscuro', 'apple-touch-icon-oscuro.png', 180))
+    for var, svg_ in variantes.items():
+        src = os.path.join(tmp, f'icono-{var}.svg')
+        open(src, 'w').write(svg_)
+        subprocess.run(['qlmanage', '-t', '-s', '1024', '-o', tmp, src], capture_output=True)
+    for var, nombre, lado in salidas:
         destino = os.path.join(RAIZ, nombre)
-        shutil.copy(png, destino)
+        shutil.copy(os.path.join(tmp, f'icono-{var}.svg.png'), destino)
         subprocess.run(['sips', '-z', str(lado), str(lado), destino], capture_output=True)
 
 avenir = '/System/Library/Fonts/Avenir Next.ttc'
