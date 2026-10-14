@@ -198,7 +198,7 @@
     <div class="addrow">
       <input type="text" id="addInput" placeholder="Nueva tarea…" enterkeyhint="done" autocomplete="off"
              onkeydown="if(event.key==='Enter'){event.preventDefault();submitAdd();}">
-      <button class="send" onclick="submitAdd()" aria-label="Agregar">↑</button>
+      <button class="send" onclick="submitAdd()" aria-label="Agregar">✓</button>
     </div>
     <div class="chips" id="addChips"></div>
     <div class="newg" id="newGroupRow" style="display:none">
@@ -206,7 +206,7 @@
       <button class="send" onclick="createGroupFromSheet()" aria-label="Crear grupo">✓</button>
     </div>
     <div class="flash" id="addFlash"></div>
-    <div style="text-align:right"><button class="linkbtn" onclick="closeAdd()">Listo</button></div>
+    <div style="text-align:right"><button class="linkbtn" onclick="closeAdd()">Cerrar</button></div>
   </div>
 </div>
 
@@ -214,7 +214,7 @@
 <div class="overlay" id="setOverlay" onclick="if(event.target===this)closeSettings()">
   <div class="sheet">
     <div class="grab"></div>
-    <div class="shead"><h2>Ajustes</h2><button class="linkbtn" onclick="closeSettings()">Listo</button></div>
+    <div class="shead"><h2>Ajustes</h2><button class="linkbtn" onclick="closeSettings()">Cerrar</button></div>
 
     <div class="sec">
       <h3>Nombre</h3>
