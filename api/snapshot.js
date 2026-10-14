@@ -1,7 +1,7 @@
 // api/snapshot.js
 // Instantánea de solo lectura de la lista de HOY, para el widget del Mac.
 //
-//   POST   /api/snapshot  { code, fecha, nombre, acento, items:[{titulo,grupo,color,urgencia,plazo,alarma}] }  → { ok }
+//   POST   /api/snapshot  { code, fecha, nombre, acento, items:[{titulo,grupo,color,urgencia,plazo,alarma}], proximos:[{…, dia}] }  → { ok }
 //   GET    /api/snapshot?token=<64hex>   → { at, fecha, items }   (404 si no hay)
 //   DELETE /api/snapshot?code=<32hex>    → { ok }
 //
@@ -29,7 +29,8 @@ function cleanItems(raw) {
       color: HEX_RE.test(it.color) ? it.color : null,
       urgencia: URGENCIAS.has(it.urgencia) ? it.urgencia : null,
       plazo: isoOrNull(it.plazo),
-      alarma: isoOrNull(it.alarma)
+      alarma: isoOrNull(it.alarma),
+      dia: FECHA_RE.test(it.dia) ? it.dia : null
     });
   }
   return out;
@@ -61,14 +62,15 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { code: rawCode, fecha, nombre, acento, items: rawItems } = req.body || {};
+    const { code: rawCode, fecha, nombre, acento, items: rawItems, proximos: rawProx } = req.body || {};
     const code = normCode(rawCode);
     const items = cleanItems(rawItems);
-    if (!validCode(code) || !FECHA_RE.test(String(fecha || '')) || !items) {
+    const proximos = rawProx === undefined ? [] : cleanItems(rawProx);
+    if (!validCode(code) || !FECHA_RE.test(String(fecha || '')) || !items || !proximos) {
       return res.status(400).json({ error: 'Datos inválidos.' });
     }
     const snap = {
-      at: new Date().toISOString(), fecha, items,
+      at: new Date().toISOString(), fecha, items, proximos,
       nombre: typeof nombre === 'string' ? nombre.trim().slice(0, 40) : '',
       acento: HEX_RE.test(acento) ? acento : null
     };

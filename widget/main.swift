@@ -14,6 +14,7 @@ struct Item {
     let urgencia: String?   // "alta" | "media" | "baja"
     let plazo: Date?
     let alarma: Date?
+    let dia: String?        // solo en lo programado para los próximos días
 }
 
 struct Config { let base: String; let token: String }
@@ -21,7 +22,7 @@ struct Config { let base: String; let token: String }
 enum Estado {
     case sinConfig
     case cargando
-    case ok(items: [Item], fecha: String, at: Date, nombre: String, acento: NSColor)
+    case ok(items: [Item], proximos: [Item], fecha: String, at: Date, nombre: String, acento: NSColor)
 }
 
 let configPath = NSString(string: "~/.tareas-widget").expandingTildeInPath
@@ -166,9 +167,14 @@ func check(done: Bool) -> NSView {
     return v
 }
 
-func fila(_ it: Item, width: CGFloat, crossed: Bool, onTap: (() -> Void)?) -> NSView {
-    // Meta a la derecha: urgencia, plazo (rojo si venció), alarma. Una tarea hecha no muestra meta.
+func fila(_ it: Item, width: CGFloat, crossed: Bool, showGroup: Bool = false, onTap: (() -> Void)?) -> NSView {
+    // Meta a la derecha: grupo (en las de próximos días), urgencia, plazo (rojo si venció), alarma. Una tarea hecha no muestra meta.
     var meta: [NSView] = []
+    if showGroup {
+        let g = NSStackView(views: [circulo(7, it.color), texto(it.grupo, font(11), cLight)])
+        g.orientation = .horizontal; g.alignment = .centerY; g.spacing = s(5)
+        meta.append(g)
+    }
     if !crossed {
         if let c = urgColor(it.urgencia) { meta.append(circulo(9, c)) }
         if let p = it.plazo { meta.append(texto(corto(p), font(12, p < Date() ? .semibold : .regular), p < Date() ? cAlta : cLight)) }
@@ -227,6 +233,24 @@ func cabeceraGrupo(_ nombre: String, _ color: NSColor, pendientes: Int, width: C
     h.spacing = s(8)
     h.edgeInsets = NSEdgeInsets(top: s(10), left: 0, bottom: s(10), right: 0)
     return h
+}
+
+// Encabezado de un día (sin punto de color), como las secciones de Próximos en la app
+func cabeceraDia(_ texto_: String, count: Int) -> NSView {
+    var views: [NSView] = [texto(texto_.uppercased(), font(12, .bold), cMid, kern: s(1.08))]
+    if count > 0 { views.append(texto("\(count)", font(12), cLight)) }
+    let h = NSStackView(views: views)
+    h.orientation = .horizontal; h.alignment = .centerY; h.spacing = s(8)
+    h.edgeInsets = NSEdgeInsets(top: s(10), left: 0, bottom: s(10), right: 0)
+    return h
+}
+
+func etiquetaDia(_ k: String) -> String {
+    let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"
+    guard let d = f.date(from: k) else { return k }
+    let g = DateFormatter(); g.locale = Locale(identifier: "es_CL"); g.dateFormat = "EEE d MMM"
+    let largo = g.string(from: d).replacingOccurrences(of: ".", with: "").replacingOccurrences(of: ",", with: "")
+    return Calendar.current.isDateInTomorrow(d) ? "Mañana · " + largo : largo
 }
 
 final class Panel: NSWindow {
@@ -311,16 +335,20 @@ final class Delegate: NSObject, NSApplicationDelegate {
                 guard let self = self else { return }
                 let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
                 if err != nil || code == 0 { self.aviso = "sin conexión"; self.rebuild(); return }
-                if code == 404 { self.estado = .ok(items: [], fecha: "", at: .distantPast, nombre: "", acento: cAccent); self.aviso = "sin datos: abre la app del celular"; self.rebuild(); return }
+                if code == 404 { self.estado = .ok(items: [], proximos: [], fecha: "", at: .distantPast, nombre: "", acento: cAccent); self.aviso = "sin datos: abre la app del celular"; self.rebuild(); return }
                 guard code == 200, let data = data,
                       let j = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
                       let arr = j["items"] as? [[String: Any]] else { self.aviso = "error del servidor"; self.rebuild(); return }
-                let items = arr.map { d in
-                    Item(titulo: d["titulo"] as? String ?? "", grupo: d["grupo"] as? String ?? "",
-                         color: hex(d["color"] as? String, fallback: cLight), urgencia: d["urgencia"] as? String,
-                         plazo: (d["plazo"] as? String).flatMap(isoDate), alarma: (d["alarma"] as? String).flatMap(isoDate))
+                func leer(_ lista: [[String: Any]]) -> [Item] {
+                    lista.map { d in
+                        Item(titulo: d["titulo"] as? String ?? "", grupo: d["grupo"] as? String ?? "",
+                             color: hex(d["color"] as? String, fallback: cLight), urgencia: d["urgencia"] as? String,
+                             plazo: (d["plazo"] as? String).flatMap(isoDate), alarma: (d["alarma"] as? String).flatMap(isoDate),
+                             dia: d["dia"] as? String)
+                    }
                 }
-                self.estado = .ok(items: items, fecha: j["fecha"] as? String ?? "", at: (j["at"] as? String).flatMap(isoDate) ?? Date(),
+                let items = leer(arr), proximos = leer(j["proximos"] as? [[String: Any]] ?? [])
+                self.estado = .ok(items: items, proximos: proximos, fecha: j["fecha"] as? String ?? "", at: (j["at"] as? String).flatMap(isoDate) ?? Date(),
                                   nombre: j["nombre"] as? String ?? "", acento: hex(j["acento"] as? String, fallback: cAccent))
                 self.aviso = nil
                 self.rebuild()
@@ -339,7 +367,7 @@ final class Delegate: NSObject, NSApplicationDelegate {
             vistas.append((texto("Falta el archivo ~/.tareas-widget", font(13), cLight), s(14)))
         case .cargando:
             vistas.append((texto("Cargando…", font(13), cLight), s(14)))
-        case .ok(let items, let fecha, let at, let n, let ac):
+        case .ok(let items, let proximos, let fecha, let at, let n, let ac):
             nombre = n; acento = ac
             dim = !fecha.isEmpty && fecha != hoyKey()   // instantánea de otro día
             let marca = fecha.isEmpty ? hoyKey() : fecha
@@ -361,6 +389,14 @@ final class Delegate: NSObject, NSApplicationDelegate {
                         alternarTachada(marca, it); self?.rebuild()
                     }), 0))
                 }
+            }
+            // Lo programado para los próximos días hábiles, por día (sin tachar: son para después)
+            var dias: [String] = []
+            for it in proximos { if let d = it.dia, !dias.contains(d) { dias.append(d) } }
+            for d in dias {
+                let delDia = proximos.filter { $0.dia == d }
+                vistas.append((cabeceraDia(etiquetaDia(d), count: delDia.count), s(14)))
+                for it in delDia { vistas.append((fila(it, width: interior, crossed: false, showGroup: true, onTap: nil), 0)) }
             }
             if at != .distantPast { pie = "actualizado " + hace(at) }
             if dim { pie = "de otro día · " + pie }

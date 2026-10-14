@@ -1345,7 +1345,13 @@ function snapshotBody() {
   ambitos.forEach(a => tasks.filter(t => t.ambito === a.id && t.enHoy && !t.completada).sort(byOrden)
     .forEach(t => items.push({ titulo:t.titulo, grupo:a.nombre, color:a.color, urgencia:t.prioridad || null, plazo:t.deadline || null,
       alarma:t.alarma.activa ? t.alarma.fechaHora : null })));
-  return JSON.stringify({ code:syncCode(), fecha:`${f.getFullYear()}-${p(f.getMonth()+1)}-${p(f.getDate())}`, nombre:userName, acento:prefs.acento, items });
+  // Lo programado hasta el siguiente día hábil (Mañana; el viernes, hasta el lunes)
+  const hoy = hoyDia(), fin = proxHabil(hoy), proximos = [];
+  tasks.filter(t => !t.completada && t.dia && t.dia > hoy && t.dia <= fin)
+    .sort((a, b) => a.dia.localeCompare(b.dia) || ambitos.findIndex(x => x.id === a.ambito) - ambitos.findIndex(x => x.id === b.ambito) || byOrden(a, b))
+    .forEach(t => { const a = getAmbito(t.ambito); proximos.push({ titulo:t.titulo, grupo:a ? a.nombre : '', color:a ? a.color : null, urgencia:t.prioridad || null, plazo:t.deadline || null,
+      alarma:t.alarma.activa ? t.alarma.fechaHora : null, dia:t.dia }); });
+  return JSON.stringify({ code:syncCode(), fecha:`${f.getFullYear()}-${p(f.getMonth()+1)}-${p(f.getDate())}`, nombre:userName, acento:prefs.acento, items, proximos });
 }
 // Con retraso para agrupar cambios seguidos; si no llega al servidor queda pendiente y se reintenta
 function queueSnapshot() {
