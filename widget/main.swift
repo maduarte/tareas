@@ -27,6 +27,14 @@ enum Estado {
 let configPath = NSString(string: "~/.tareas-widget").expandingTildeInPath
 let refreshSeconds: TimeInterval = 180
 
+// Escala de todo el widget (texto y medidas), elegible con clic derecho. 1 = tamaño de la app en el teléfono.
+let escalasDisponibles: [CGFloat] = [0.7, 0.8, 0.85, 0.9, 1.0]
+var escala: CGFloat = {
+    let g = UserDefaults.standard.double(forKey: "escala")
+    return g > 0 ? CGFloat(g) : 0.8
+}()
+func s(_ x: CGFloat) -> CGFloat { x * escala }
+
 // ─── Paleta de la app (tema oscuro) ──────────────────────────────
 func hex(_ s: String?, fallback: NSColor) -> NSColor {
     guard let s = s, s.count == 7, s.hasPrefix("#"), let v = UInt32(s.dropFirst(), radix: 16) else { return fallback }
@@ -50,7 +58,7 @@ func urgColor(_ u: String?) -> NSColor? {
 // Helvetica Neue, como la app; sin semibold (como en el navegador, 600 cae en negrita)
 func font(_ size: CGFloat, _ weight: NSFont.Weight = .regular) -> NSFont {
     let name = weight.rawValue >= NSFont.Weight.semibold.rawValue ? "HelveticaNeue-Bold" : (weight.rawValue >= NSFont.Weight.medium.rawValue ? "HelveticaNeue-Medium" : "HelveticaNeue")
-    return NSFont(name: name, size: size) ?? NSFont.systemFont(ofSize: size, weight: weight)
+    return NSFont(name: name, size: s(size)) ?? NSFont.systemFont(ofSize: s(size), weight: weight)
 }
 
 // ─── Fechas ──────────────────────────────────────────────────────
@@ -116,7 +124,8 @@ func texto(_ s: String, _ f: NSFont, _ c: NSColor, kern: CGFloat = 0) -> NSTextF
     return t
 }
 
-func circulo(_ d: CGFloat, _ c: NSColor) -> NSView {
+func circulo(_ dd: CGFloat, _ c: NSColor) -> NSView {
+    let d = s(dd)
     let v = NSView()
     v.wantsLayer = true
     v.layer?.cornerRadius = d / 2
@@ -140,13 +149,13 @@ final class ClickRow: NSStackView {
 func check(done: Bool) -> NSView {
     let v = NSView()
     v.wantsLayer = true
-    v.layer?.cornerRadius = 12
-    v.layer?.borderWidth = 1.8
+    v.layer?.cornerRadius = s(12)
+    v.layer?.borderWidth = s(1.8)
     v.layer?.borderColor = (done ? cDone : cLight).cgColor
     v.layer?.backgroundColor = (done ? cDone : NSColor.clear).cgColor
     v.translatesAutoresizingMaskIntoConstraints = false
-    v.widthAnchor.constraint(equalToConstant: 24).isActive = true
-    v.heightAnchor.constraint(equalToConstant: 24).isActive = true
+    v.widthAnchor.constraint(equalToConstant: s(24)).isActive = true
+    v.heightAnchor.constraint(equalToConstant: s(24)).isActive = true
     if done {
         let c = texto("✓", font(14), cBg)
         c.translatesAutoresizingMaskIntoConstraints = false
@@ -167,7 +176,7 @@ func fila(_ it: Item, width: CGFloat, crossed: Bool, onTap: (() -> Void)?) -> NS
     }
     let metaStack = NSStackView(views: meta)
     metaStack.orientation = .horizontal
-    metaStack.spacing = 8
+    metaStack.spacing = s(8)
     metaStack.setContentHuggingPriority(.required, for: .horizontal)
     metaStack.setContentCompressionResistancePriority(.required, for: .horizontal)
 
@@ -176,9 +185,9 @@ func fila(_ it: Item, width: CGFloat, crossed: Bool, onTap: (() -> Void)?) -> NS
     var attrs: [NSAttributedString.Key: Any] = [.font: font(16), .foregroundColor: crossed ? cDone : cText]
     if crossed { attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
     t.attributedStringValue = NSAttributedString(string: it.titulo, attributes: attrs)
-    let gap: CGFloat = 12
+    let gap: CGFloat = s(12)
     let metaW = meta.isEmpty ? 0 : metaStack.fittingSize.width + gap
-    t.preferredMaxLayoutWidth = width - 24 - gap - metaW
+    t.preferredMaxLayoutWidth = width - s(24) - gap - metaW
     t.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
     var views: [NSView] = [check(done: crossed), t]
@@ -189,9 +198,9 @@ func fila(_ it: Item, width: CGFloat, crossed: Bool, onTap: (() -> Void)?) -> NS
     h.orientation = .horizontal
     h.alignment = .centerY
     h.spacing = gap
-    h.edgeInsets = NSEdgeInsets(top: 4, left: 0, bottom: 4, right: 0)
+    h.edgeInsets = NSEdgeInsets(top: s(4), left: 0, bottom: s(4), right: 0)
     h.translatesAutoresizingMaskIntoConstraints = false
-    h.heightAnchor.constraint(greaterThanOrEqualToConstant: 48).isActive = true
+    h.heightAnchor.constraint(greaterThanOrEqualToConstant: s(48)).isActive = true
 
     let linea = NSView()
     linea.wantsLayer = true
@@ -210,26 +219,28 @@ func fila(_ it: Item, width: CGFloat, crossed: Bool, onTap: (() -> Void)?) -> NS
 }
 
 func cabeceraGrupo(_ nombre: String, _ color: NSColor, pendientes: Int, width: CGFloat) -> NSView {
-    var views: [NSView] = [circulo(8, color), texto(nombre.uppercased(), font(12, .bold), cMid, kern: 1.08)]
+    var views: [NSView] = [circulo(8, color), texto(nombre.uppercased(), font(12, .bold), cMid, kern: s(1.08))]
     if pendientes > 0 { views.append(texto("\(pendientes)", font(12), cLight)) }
     let h = NSStackView(views: views)
     h.orientation = .horizontal
     h.alignment = .centerY
-    h.spacing = 8
-    h.edgeInsets = NSEdgeInsets(top: 10, left: 0, bottom: 10, right: 0)
+    h.spacing = s(8)
+    h.edgeInsets = NSEdgeInsets(top: s(10), left: 0, bottom: s(10), right: 0)
     return h
 }
 
 final class Panel: NSWindow {
+    var onMenu: ((NSEvent) -> Void)?
     override var canBecomeKey: Bool { false }
     override var canBecomeMain: Bool { false }
+    override func rightMouseDown(with event: NSEvent) { onMenu?(event) }
 }
 
 final class Delegate: NSObject, NSApplicationDelegate {
     var win: Panel!
     let fondo = NSView()
-    let ancho: CGFloat = 340          // ventana
-    let interior: CGFloat = 300       // contenido (20 px de margen a cada lado, como la app)
+    var ancho: CGFloat { s(340) }     // ventana
+    var interior: CGFloat { s(300) }  // contenido (20 px de margen a cada lado, como la app)
     var estado: Estado = .cargando
     var aviso: String? = nil          // p. ej. "sin conexión"
     var timer: Timer?
@@ -237,12 +248,12 @@ final class Delegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ n: Notification) {
         // Negro translúcido, sin desenfoque gris
         fondo.wantsLayer = true
-        fondo.layer?.cornerRadius = 16
         fondo.layer?.masksToBounds = true
         fondo.layer?.backgroundColor = NSColor(white: 0, alpha: 0.62).cgColor
 
         win = Panel(contentRect: NSRect(x: 0, y: 0, width: ancho, height: 80), styleMask: [.borderless], backing: .buffered, defer: false)
         win.contentView = fondo
+        win.onMenu = { [weak self] e in self?.mostrarMenu(e) }
         win.appearance = NSAppearance(named: .darkAqua)
         win.isOpaque = false
         win.backgroundColor = .clear
@@ -267,6 +278,27 @@ final class Delegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in self?.fetch() }
         // Reloj de "actualizado hace X" y cambio de día sin tocar la red
         Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in self?.rebuild() }
+    }
+
+    func mostrarMenu(_ e: NSEvent) {
+        let m = NSMenu()
+        let t = NSMenuItem(title: "Tamaño", action: nil, keyEquivalent: ""); t.isEnabled = false
+        m.addItem(t)
+        for v in escalasDisponibles {
+            let it = NSMenuItem(title: "\(Int((v * 100).rounded())) %", action: #selector(elegirEscala(_:)), keyEquivalent: "")
+            it.target = self
+            it.representedObject = NSNumber(value: Double(v))
+            it.state = abs(v - escala) < 0.001 ? .on : .off
+            m.addItem(it)
+        }
+        NSMenu.popUpContextMenu(m, with: e, for: win.contentView!)
+    }
+
+    @objc func elegirEscala(_ item: NSMenuItem) {
+        guard let n = item.representedObject as? NSNumber else { return }
+        escala = CGFloat(n.doubleValue)
+        UserDefaults.standard.set(n.doubleValue, forKey: "escala")
+        rebuild()
     }
 
     func fetch() {
@@ -304,16 +336,16 @@ final class Delegate: NSObject, NSApplicationDelegate {
 
         switch estado {
         case .sinConfig:
-            vistas.append((texto("Falta el archivo ~/.tareas-widget", font(13), cLight), 14))
+            vistas.append((texto("Falta el archivo ~/.tareas-widget", font(13), cLight), s(14)))
         case .cargando:
-            vistas.append((texto("Cargando…", font(13), cLight), 14))
+            vistas.append((texto("Cargando…", font(13), cLight), s(14)))
         case .ok(let items, let fecha, let at, let n, let ac):
             nombre = n; acento = ac
             dim = !fecha.isEmpty && fecha != hoyKey()   // instantánea de otro día
             let marca = fecha.isEmpty ? hoyKey() : fecha
             let tachadas = leerTachadas(marca)
             if items.isEmpty {
-                vistas.append((texto(dim ? "Lista de otro día" : "Nada marcado para HOY", font(13), cLight), 14))
+                vistas.append((texto(dim ? "Lista de otro día" : "Nada marcado para HOY", font(13), cLight), s(14)))
             }
             // Grupos en el orden recibido; dentro de cada uno, lo tachado va al final (como lo hecho en la app)
             var orden: [String] = []
@@ -322,12 +354,12 @@ final class Delegate: NSObject, NSApplicationDelegate {
                 let del = items.filter { $0.grupo == g }
                 let pend = del.filter { !tachadas.contains(claveTachada(marca, $0)) }
                 let hechas = del.filter { tachadas.contains(claveTachada(marca, $0)) }
-                vistas.append((cabeceraGrupo(g, del[0].color, pendientes: pend.count, width: interior), 14))
-                for (i, it) in (pend + hechas).enumerated() {
+                vistas.append((cabeceraGrupo(g, del[0].color, pendientes: pend.count, width: interior), s(14)))
+                for it in pend + hechas {
                     let cruzada = tachadas.contains(claveTachada(marca, it))
                     vistas.append((fila(it, width: interior, crossed: cruzada, onTap: dim ? nil : { [weak self] in
                         alternarTachada(marca, it); self?.rebuild()
-                    }), i == 0 ? 0 : 0))
+                    }), 0))
                 }
             }
             if at != .distantPast { pie = "actualizado " + hace(at) }
@@ -336,10 +368,10 @@ final class Delegate: NSObject, NSApplicationDelegate {
         if let a = aviso { pie = pie.isEmpty ? a : pie + " · " + a }
 
         // Encabezado: "Tareas · Nombre", como la marca de la app
-        let marcaStr = NSMutableAttributedString(string: "Tareas", attributes: [.font: font(20, .bold), .foregroundColor: cText, .kern: -0.5])
+        let marcaStr = NSMutableAttributedString(string: "Tareas", attributes: [.font: font(20, .bold), .foregroundColor: cText, .kern: s(-0.5)])
         if !nombre.isEmpty {
-            marcaStr.append(NSAttributedString(string: " · ", attributes: [.font: font(20, .medium), .foregroundColor: cMid, .kern: -0.5]))
-            marcaStr.append(NSAttributedString(string: nombre, attributes: [.font: font(20, .medium), .foregroundColor: acento, .kern: -0.5]))
+            marcaStr.append(NSAttributedString(string: " · ", attributes: [.font: font(20, .medium), .foregroundColor: cMid, .kern: s(-0.5)]))
+            marcaStr.append(NSAttributedString(string: nombre, attributes: [.font: font(20, .medium), .foregroundColor: acento, .kern: s(-0.5)]))
         }
         let marca = NSTextField(labelWithString: "")
         marca.attributedStringValue = marcaStr
@@ -349,7 +381,7 @@ final class Delegate: NSObject, NSApplicationDelegate {
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 0
-        stack.edgeInsets = NSEdgeInsets(top: 16, left: 20, bottom: 14, right: 20)
+        stack.edgeInsets = NSEdgeInsets(top: s(16), left: s(20), bottom: s(14), right: s(20))
         stack.translatesAutoresizingMaskIntoConstraints = false
         stack.addArrangedSubview(marca)
         marca.translatesAutoresizingMaskIntoConstraints = false
@@ -361,10 +393,11 @@ final class Delegate: NSObject, NSApplicationDelegate {
         if !pie.isEmpty {
             let p = texto(pie, font(11), cLight)
             stack.addArrangedSubview(p)
-            if let prev = stack.arrangedSubviews.dropLast().last { stack.setCustomSpacing(14, after: prev) }
+            if let prev = stack.arrangedSubviews.dropLast().last { stack.setCustomSpacing(s(14), after: prev) }
         }
         stack.alphaValue = dim ? 0.45 : 1
 
+        fondo.layer?.cornerRadius = s(16)
         fondo.subviews.forEach { $0.removeFromSuperview() }
         fondo.addSubview(stack)
         NSLayoutConstraint.activate([
