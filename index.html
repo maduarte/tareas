@@ -268,6 +268,12 @@
     </div>
 
     <div class="sec">
+      <h3>Duplicados</h3>
+      <p class="hint" id="dupInfo" style="margin:0 0 10px"></p>
+      <div class="btnrow"><button class="btn2" id="dupReset" onclick="resetDup()">Reiniciar aprendizaje</button></div>
+    </div>
+
+    <div class="sec">
       <h3>Datos</h3>
       <div class="btnrow">
         <button class="btn2" onclick="exportJSON()">↓ Exportar</button>
@@ -327,7 +333,7 @@ const ACENTOS = ['#e05a5a','#4a8fd4','#3fa66a','#8a6fd1','#d99a1e'];
 const RANK = { alta:0, media:1, baja:2 };
 const K = {
   tasks:'tareas_v2', ambitos:'tareas_ambitos_v1', name:'tareas_username',
-  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', widget:'tareas_widget', snapPend:'tareas_widget_pend', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo', aviso:'tareas_aviso', dupNo:'tareas_dup_no',
+  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', widget:'tareas_widget', snapPend:'tareas_widget_pend', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo', aviso:'tareas_aviso', dupNo:'tareas_dup_no', dupW:'tareas_dup_w',
 };
 
 // ─── ESTADO ──────────────────────────────────────────────────────
@@ -505,7 +511,7 @@ function dice(a, b) {
   a.forEach((v, g) => { if (b.has(g)) inter += Math.min(v, b.get(g)); });
   return na + nb ? 2 * inter / (na + nb) : 0;
 }
-// Señales de un par (todas entre 0 y 1): palabras en común, contención, letras en común, mismo grupo, fecha cercana
+// Señales de un par (todas entre 0 y 1): palabras en común, contención, letras en común, mismo grupo, fecha cercana, título idéntico
 function senalesDup(a, b) {
   const A = palabras(a.titulo), B = palabras(b.titulo);
   let inter = 0; A.forEach(w => { if (B.has(w)) inter++; });
@@ -517,11 +523,29 @@ function senalesDup(a, b) {
     dice(trigramas(a.titulo), trigramas(b.titulo)),
     a.ambito === b.ambito ? 1 : 0,
     dist === null ? 0 : (dist === 0 ? 1 : dist <= 2 ? 0.5 : 0),
+    normTxt(a.titulo).trim() === normTxt(b.titulo).trim() ? 1 : 0,   // títulos idénticos: lo que se aprende de pares parecidos no lo toca
   ];
 }
-const DUP_W0 = [4, 2, 3, 1, 0.5], DUP_B0 = -6, DUP_UMBRAL = 0.7;
+// Pesos de partida: dan un detector razonable desde el primer día. Después se ajustan con
+// las respuestas de la persona («es duplicada» / «no es duplicada»), solo en este dispositivo.
+const DUP_W0 = [4, 2, 3, 1, 0.5, 3], DUP_B0 = -6, DUP_UMBRAL = 0.7;
+const DUP_LR = 0.15, DUP_REG = 0.03;   // paso de aprendizaje y tirón hacia los pesos de partida
 const sigmoide = z => 1 / (1 + Math.exp(-z));
-function probDup(x) { return sigmoide(DUP_B0 + x.reduce((s, v, i) => s + DUP_W0[i] * v, 0)); }
+function dupModelo() {
+  const m = lsJSON(K.dupW, null);
+  const ok = m && Array.isArray(m.w) && m.w.length === DUP_W0.length && m.w.every(Number.isFinite) && Number.isFinite(m.b);
+  return ok ? { w: m.w, b: m.b, n: Number(m.n) || 0 } : { w: DUP_W0.slice(), b: DUP_B0, n: 0 };
+}
+function probDup(x, m = dupModelo()) { return sigmoide(m.b + x.reduce((s, v, i) => s + m.w[i] * v, 0)); }
+// Un paso de descenso de gradiente (regresión logística) con una respuesta y (1 = duplicada, 0 = no)
+function aprenderDup(x, y) {
+  const m = dupModelo(), err = y - probDup(x, m);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  m.w = m.w.map((w, i) => clamp(w + DUP_LR * err * x[i] - DUP_REG * (w - DUP_W0[i]), 0, 10));
+  m.b = clamp(m.b + DUP_LR * err - DUP_REG * (m.b - DUP_B0), -12, -1);
+  m.n++;
+  lsSet(K.dupW, JSON.stringify(m));
+}
 const parKey = (a, b) => [normTxt(a).trim(), normTxt(b).trim()].sort().join('|');
 const dupDescartados = () => new Set(lsJSON(K.dupNo, []));
 // Tareas pendientes que probablemente repiten a `nueva` (las ya descartadas como no duplicadas no vuelven a salir)
@@ -1048,11 +1072,15 @@ function mostrarDup(dup, nueva) {
   box.innerHTML = `<div class="dupmsg">Se parece a ${dup.map(x => `«${esc(x.t.titulo)}»${x.t.dia ? ' (' + fmtDia(x.t.dia) + ')' : ''}`).join(', ')}.</div>
     <div class="btnrow"><button class="btn2" onclick="dupResolver(false)">No es duplicada</button><button class="btn2" onclick="dupResolver(true)">Es duplicada</button></div>`;
   box.style.display = 'block';
-  box._dup = { dup, titulo: nueva.titulo };
+  box._dup = { dup, titulo: nueva.titulo, ambito: nueva.ambito, dia: nueva.dia };
 }
 function dupResolver(esDuplicada) {
   const box = document.getElementById('addDup'), info = box._dup;
   if (!info) return;
+  // Cada respuesta enseña al detector: la más parecida es la duplicada; si no lo es, ninguna de las mostradas lo era
+  const nueva = { titulo: info.titulo, ambito: info.ambito, dia: info.dia };
+  if (esDuplicada) aprenderDup(senalesDup(nueva, info.dup[0].t), 1);
+  else info.dup.forEach(x => aprenderDup(senalesDup(nueva, x.t), 0));
   if (esDuplicada) {
     ocultarDup();
     document.getElementById('addInput').value = '';
@@ -1126,7 +1154,16 @@ function renderSettings() {
   document.getElementById('setNewColor').value = nextColor();
   renderPushInfo();
   renderWidgetInfo();
+  renderDupInfo();
 }
+function renderDupInfo() {
+  const n = dupModelo().n;
+  document.getElementById('dupInfo').textContent = n
+    ? `Al agregar una tarea parecida a otra, la app avisa. Ha aprendido de ${n} respuesta${n !== 1 ? 's' : ''} tuya${n !== 1 ? 's' : ''} (solo en este dispositivo).`
+    : 'Al agregar una tarea parecida a otra, la app avisa. Aprende de tus respuestas «es duplicada» y «no es duplicada».';
+  document.getElementById('dupReset').style.display = n ? '' : 'none';
+}
+function resetDup() { try { localStorage.removeItem(K.dupW); localStorage.removeItem(K.dupNo); } catch(e) {} renderDupInfo(); }
 function saveName(v) { userName = v.trim(); lsSet(K.name, userName); render(); }
 function setTema(v) { prefs.tema = v; lsSet(K.tema, v); applyTheme(); renderSettings(); }
 function setAcento(c) { prefs.acento = c; lsSet(K.acento, c); applyTheme(); renderSettings(); }
