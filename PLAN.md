@@ -98,13 +98,20 @@ Inspirada en Things 3. Nada de esto está construido; son decisiones por tomar a
 
 **3. Rollover.** Lo que no se termina hoy debe quedar en HOY mañana. Hoy ya ocurre sin hacer nada: `enHoy` es manual y solo se quita a mano, así que no hay que construirlo. Lo que sí falta es lo contrario: que lo programado para mañana *entre* en HOY ese día.
 
+**Decisiones tomadas (14-oct-2026)**
+- **Un solo campo de fecha** con hora opcional («programada»). Las alarmas existentes se migran a «programada con hora».
+- **Lo programado a futuro queda visible** en Todas (con su fecha) y en la vista de próximos; no se oculta como en Things.
+- **Regla de HOY con prioridad:** una tarea nueva o editada con fecha programada *futura* no entra en HOY; en cualquier otro caso (sin fecha, o fecha de hoy) sí entra automáticamente. El día programado entra sola en HOY. Quitar la fecha no cambia si está en HOY.
+- **Detector de duplicados:** al crear o programar una tarea, comparar su título con las demás pendientes (sin tildes ni mayúsculas, por palabras en común) y avisar si hay una muy parecida, sobre todo si está programada en otra fecha. Solo avisa, no bloquea, y se puede descartar.
+- **Aviso diario de plazos sin planificar:** al abrir la app la primera vez cada día, listar las tareas que tienen Plazo en la ventana de «mañana» y no están programadas ni en HOY, para elegir cuáles activar hoy.
+  - La ventana de «mañana» es hasta el *siguiente día hábil*: si hoy es viernes (o sábado/domingo), incluye sábado a lunes; el resto de la semana, solo mañana.
+  - Cada tarea del aviso se activa con un toque (entra en HOY) o se descarta por hoy.
+
 **Decisiones abiertas**
-- ¿Programar con hora y sin hora son lo mismo con un campo opcional, o dos campos? Propuesta: una sola fecha, la hora es opcional.
-- ¿Qué pasa con las alarmas ya existentes? Migrar `alarma.fechaHora` a «programada con hora».
-- ¿Dónde viven las tareas programadas a futuro: ocultas de Todas hasta su día (como Things) o visibles con una marca? Propuesta: visibles en Todas con la fecha, y también en la vista de próximos.
-- ¿Qué hace la vista de Mañana con tareas que solo tienen Plazo mañana? Propuesta: mostrarlas aparte, sin programarlas.
-- Impacto: `sw.js` y `api/alarms/*` siguen igual (la hora sigue siendo un push), cambia el modelo de datos en `index.html`, el texto del README y el widget (la instantánea podría llevar también las de mañana).
-- La regla actual «las tareas nuevas entran en HOY por defecto» choca con programar: una tarea con fecha futura no debería entrar en HOY.
+- Qué cuenta como día hábil: lunes a viernes fijo, o configurable. Los feriados quedan fuera de esta fase.
+- Cuán parecido es «muy parecido» para el detector (umbral de palabras en común) y cuándo avisa si ya se descartó una vez la misma pareja.
+- Si el aviso diario se muestra de nuevo al volver a la app durante el día, o solo la primera vez; propuesta: solo la primera vez y con acceso desde la vista de próximos.
+- Impacto: `sw.js` y `api/alarms/*` siguen igual (la hora sigue siendo un push); cambian el modelo de datos de `index.html`, el README y, opcionalmente, el widget (la instantánea podría llevar también lo de mañana).
 
 ### Fase C: pendiente de uso real
 - ~~Sync de tareas entre dispositivos~~: **descartado** (decisión del usuario, 9-oct-2026). Cada dispositivo guarda sus propias tareas.
