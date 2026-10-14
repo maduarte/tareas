@@ -85,7 +85,7 @@
   .open .line { border-bottom: 0; cursor: default; }
   .title-in { flex: 1; min-width: 0; font-family: var(--font); font-size: 16px; color: var(--text); background: none; border: none; outline: none; border-bottom: 1.5px solid transparent; padding: 4px 0; }
   .title-in:focus { border-bottom-color: var(--accent); }
-  .fold { background: none; border: none; color: var(--text-light); font-size: 14px; width: 32px; height: 32px; cursor: pointer; }
+  .fold { background: none; border: none; color: var(--text-light); font-size: 13px; font-family: var(--font); padding: 6px 4px 6px 12px; cursor: pointer; }
   .detail { padding: 2px 0 14px 36px; display: flex; flex-direction: column; gap: 12px; }
   .drow { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-light); min-height: 30px; }
   .drow .k { width: 62px; flex: none; }
@@ -531,7 +531,7 @@ function openRowHTML(t) {
     <div class="line">
       <button class="check" onclick="toggleComplete('${t.id}',event)" aria-label="Completar"></button>
       <input class="title-in" value="${esc(t.titulo)}" onchange="setTitle('${t.id}',this.value)" onkeydown="if(event.key==='Enter')this.blur()">
-      <button class="fold" onclick="toggleOpen('${t.id}')" aria-label="Cerrar">▴</button>
+      <button class="fold" onclick="toggleOpen('${t.id}')" >Cerrar</button>
     </div>
     <div class="detail">
       <div class="drow"><span class="k">Alarma</span>${whenField('alarma', t.alarma.activa ? t.alarma.fechaHora : null, t.id)}</div>
@@ -555,19 +555,22 @@ function toast(msg) {
   el.textContent = msg; el.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
 }
-// El campo de fecha no guarda hasta tocar OK: si se sale con otra hora elegida, avisar.
-function discardWhen() {
-  if (!editWhen || !editWhen.custom) return;
+// El campo de fecha no guarda hasta tocar OK: si hay otra hora elegida, avisa y devuelve true para que quien llama no salga.
+function pendingWhen() {
+  if (!editWhen || !editWhen.custom) return false;
   const inp = document.getElementById('whenInput'), t = T(editWhen.id);
-  if (!inp || !inp.value || !t) return;
+  if (!inp || !inp.value || !t) return false;
   const saved = editWhen.kind === 'alarma' ? (t.alarma.activa ? t.alarma.fechaHora : null) : t.deadline;
-  if (inp.value !== (saved ? isoToLocal(saved) : editWhen.orig)) toast('No se guardó la hora: toca OK para confirmar');
+  if (inp.value === (saved ? isoToLocal(saved) : editWhen.orig)) return false;
+  toast('Toca OK para guardar la hora, o ✕ para descartarla');
+  return true;
 }
-function setScope(s) { discardWhen(); scope = s; openId = null; editWhen = null; render(); }
+function setScope(s) { if (pendingWhen()) return; scope = s; openId = null; editWhen = null; render(); }
 function toggleGroup(id) { plegados.has(id) ? plegados.delete(id) : plegados.add(id); savePlegados(); render(); }
 function toggleOpen(id) {
   if (justDragged) return;
-  discardWhen(); openId = openId === id ? null : id; confirmDelId = null; editWhen = null; render();
+  if (pendingWhen()) return;
+  openId = openId === id ? null : id; confirmDelId = null; editWhen = null; render();
 }
 function toggleComplete(id, e) {
   if (e) e.stopPropagation();
@@ -590,7 +593,7 @@ function setGroupOf(id, gid) {
   const t = T(id); if (!t) return;
   t.ambito = gid; t.manual = false; placeByRule(t); save(); render();
 }
-function startWhen(id, kind) { discardWhen(); editWhen = { id, kind, custom:false }; render(); }
+function startWhen(id, kind) { if (pendingWhen()) return; editWhen = { id, kind, custom:false }; render(); }
 function customWhen() { editWhen.custom = true; editWhen.orig = nextHourLocal(); render(); }
 function applyPreset(id, kind, i) {
   const x = presets(kind)[i]; if (!x) return;
