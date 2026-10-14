@@ -100,6 +100,7 @@
   .okbtn { font-family: var(--font); font-size: 14px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
   .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); max-width: calc(100% - 32px); background: var(--text); color: var(--bg); font-size: 14px; padding: 10px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50; text-align: center; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .opt { font-size: 12px; color: var(--text-light); }
   .xbtn { position: relative; z-index: 2; background: none; border: none; color: var(--text-light); font-size: 15px; cursor: pointer; padding: 8px 12px; margin: -4px 0; }
   .urg { display: flex; gap: 10px; }
   .urg button { width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent; opacity: .35; cursor: pointer; }
@@ -356,10 +357,15 @@ function normalize() {
     enHoy: !!t.enHoy,
     completada: !!t.completada, completadaEn: t.completadaEn || null,
     alarma: t.alarma && t.alarma.activa && t.alarma.fechaHora ? { activa:true, fechaHora:t.alarma.fechaHora, disparada:!!t.alarma.disparada, perdida:!!t.alarma.perdida, srv:!!t.alarma.srv } : { activa:false, fechaHora:null, disparada:false },
+    // Día programado ('YYYY-MM-DD'). diaAplicada: ya se aplicó la entrada automática a HOY de ese día.
+    dia: /^\d{4}-\d{2}-\d{2}$/.test(t.dia || '') ? t.dia : null,
+    diaAplicada: t.diaAplicada === undefined ? true : !!t.diaAplicada,
     manual: !!t.manual,
     fechaCreacion: t.fechaCreacion || new Date().toISOString(),
     orden: typeof t.orden === 'number' ? t.orden : 0,
   }));
+  // Una alarma siempre cae en el día programado (así se migran también las alarmas antiguas)
+  tasks.forEach(t => { if (t.alarma.activa) t.dia = diaKey(t.alarma.fechaHora); });
   // Tareas con un grupo que ya no existe: se crea para no perderlas
   tasks.forEach(t => {
     if (!t.ambito) t.ambito = 'sin-grupo';
@@ -396,12 +402,68 @@ function fmtLong(iso) {
   return d.toLocaleDateString('es-CL', { weekday:'short', day:'numeric', month:'short' }).replace(/\./g,'') + ' · ' + hm(d);
 }
 
+// ─── DÍAS (para programar) ───────────────────────────────────────
+const pad2 = n => String(n).padStart(2, '0');
+function diaKey(d) { d = new Date(d); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+const hoyDia = () => diaKey(new Date());
+const diaToDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+function addDias(k, n) { const d = diaToDate(k); d.setDate(d.getDate() + n); return diaKey(d); }
+const diasHasta = k => Math.round((diaToDate(k) - diaToDate(hoyDia())) / 864e5);
+function fmtDia(k) {
+  const n = diasHasta(k);
+  if (n === 0) return 'hoy';
+  if (n === 1) return 'mañana';
+  if (n === -1) return 'ayer';
+  const d = diaToDate(k);
+  if (n > 1 && n < 7) return d.toLocaleDateString('es-CL', { weekday:'short' }).replace('.', '');
+  return d.toLocaleDateString('es-CL', { day:'numeric', month:'short' }).replace('.', '');
+}
+function fmtDiaLargo(k) { return diaToDate(k).toLocaleDateString('es-CL', { weekday:'short', day:'numeric', month:'short' }).replace(/\./g, ''); }
+// Días hábiles: lunes a viernes (los fines de semana no se programan, solo se ponen al día)
+const esHabil = k => { const w = diaToDate(k).getDay(); return w >= 1 && w <= 5; };
+function proxHabil(k) { let d = addDias(k, 1); while (!esHabil(d)) d = addDias(d, 1); return d; }
+
 // Los completados desaparecen al terminar el día (se borran de verdad)
 function purgeCompleted() {
   const today = dayKey(new Date());
   const before = tasks.length;
   tasks = tasks.filter(t => !t.completada || (t.completadaEn && dayKey(t.completadaEn) === today));
   return tasks.length !== before;
+}
+
+// ─── PROGRAMAR ───────────────────────────────────────────────────
+// Una tarea se programa para un día, con hora opcional (la hora es la que dispara la
+// notificación). Regla de HOY, con prioridad: si el día es futuro la tarea sale de HOY
+// y entra sola ese día; si es hoy (o antes), entra a HOY de inmediato.
+function setProgramada(t, dia, when) {
+  t.dia = dia;
+  const futuro = dia > hoyDia();
+  t.enHoy = !futuro;
+  t.diaAplicada = !futuro;
+  if (when) {
+    t.alarma = { activa:true, fechaHora:when.toISOString(), disparada:false, perdida:false };
+    delete ultimoIntento[t.id];
+  } else if (t.alarma.activa) {
+    t.alarma = { activa:false, fechaHora:null, disparada:false };
+    cancelAlarm(t.id);
+  }
+}
+function clearProgramada(t) {
+  t.dia = null; t.diaAplicada = true;
+  if (t.alarma.activa) { t.alarma = { activa:false, fechaHora:null, disparada:false }; cancelAlarm(t.id); }
+}
+// Posponer mueve la alarma: el día programado la sigue (sin forzar HOY si es hoy)
+function seguirAlarma(t) {
+  t.dia = diaKey(t.alarma.fechaHora);
+  if (t.dia > hoyDia()) { t.enHoy = false; t.diaAplicada = false; }
+}
+// Llegó el día programado: la tarea entra sola en HOY (una sola vez; quitarla de HOY después es manual)
+function aplicarProgramadas() {
+  const hoy = hoyDia(); let cambio = false;
+  tasks.forEach(t => {
+    if (!t.completada && t.dia && t.dia <= hoy && !t.diaAplicada) { t.enHoy = true; t.diaAplicada = true; cambio = true; }
+  });
+  return cambio;
 }
 
 // ─── ORDEN ───────────────────────────────────────────────────────
@@ -486,7 +548,8 @@ function metaHTML(t) {
       const late = new Date(t.deadline) < new Date();
       parts.push(`<span class="${late?'late':''}">${fmtShort(t.deadline)}</span>`);
     }
-    if (t.alarma.activa) parts.push(t.deadline ? '🔔' : `🔔 ${fmtShort(t.alarma.fechaHora)}`);
+    if (t.dia && t.dia > hoyDia()) parts.push(`📅 ${fmtDia(t.dia)}${t.alarma.activa ? ' ' + hm(new Date(t.alarma.fechaHora)) : ''}`);
+    else if (t.alarma.activa) parts.push(t.deadline ? '🔔' : `🔔 ${fmtShort(t.alarma.fechaHora)}`);
   }
   return parts.length ? `<span class="meta">${parts.join('')}</span>` : '';
 }
@@ -506,15 +569,61 @@ function rowHTML(t) {
 function nextHourLocal() { const d = new Date(); d.setMinutes(0,0,0); d.setHours(d.getHours() + 1); return isoToLocal(d.toISOString()); }
 
 // Atajos de un toque. "Hoy 18:00" solo se ofrece si todavía no pasó.
-function presets(kind) {
+function presets() {
   const at = (dias, h) => { const d = new Date(); d.setDate(d.getDate() + dias); d.setHours(h, 0, 0, 0); return d; };
-  const list = kind === 'alarma'
-    ? [{ label:'En 10 min', d:new Date(Date.now() + 10 * 60000) }, { label:'Hoy 18:00', d:at(0, 18) }, { label:'Mañana 9:00', d:at(1, 9) }]
-    : [{ label:'Mañana 18:00', d:at(1, 18) }, { label:'En 3 días', d:at(3, 18) }, { label:'En 1 semana', d:at(7, 18) }];
-  return list.filter(x => x.d > Date.now());
+  return [{ label:'Mañana 18:00', d:at(1, 18) }, { label:'En 3 días', d:at(3, 18) }, { label:'En 1 semana', d:at(7, 18) }]
+    .filter(x => x.d > Date.now());
 }
 
-function whenField(kind, iso, id) {
+// Atajos de Programar: cada uno da un día y, si lleva hora, la hora de la notificación
+function progPresets() {
+  const hoy = hoyDia(), now = Date.now();
+  const at = h => { const d = new Date(); d.setHours(h, 0, 0, 0); return d; };
+  const list = [
+    { label:'En 10 min', when:new Date(now + 10 * 60000) },
+    { label:'Hoy 18:00', when:at(18) },
+    { label:'Mañana', dia:addDias(hoy, 1) },
+  ];
+  if (proxHabil(hoy) !== addDias(hoy, 1)) list.push({ label:'Lunes', dia:proxHabil(hoy) });
+  list.push({ label:'En 1 semana', dia:addDias(hoy, 7) });
+  return list.filter(x => !x.when || x.when.getTime() > now).map(x => ({ label:x.label, dia:x.dia || diaKey(x.when), when:x.when || null }));
+}
+const horaLocal = iso => isoToLocal(iso).slice(11);
+// Campos de Otra…: día (obligatorio) y hora (opcional). Nada se guarda hasta tocar OK.
+function progCustomHTML(pre, ok, cancel, dia, hora) {
+  return `<span class="whenedit"><input type="date" class="dtin" id="${pre}Dia" value="${dia}" min="${hoyDia()}">
+    <input type="time" class="dtin" id="${pre}Hora" value="${hora || ''}" aria-label="Hora, opcional">
+    <small class="opt">hora opcional</small>
+    <button class="okbtn" onclick="${ok}">OK</button>
+    <button class="xbtn" onclick="${cancel}" aria-label="Cancelar">✕</button></span>`;
+}
+// Lee y valida los campos; marca en rojo lo que no sirve. Devuelve { dia, when } o null.
+function readProg(pre) {
+  const d = document.getElementById(pre + 'Dia'), h = document.getElementById(pre + 'Hora');
+  if (!d || !d.value) return null;
+  d.classList.toggle('bad', d.value < hoyDia());
+  if (d.value < hoyDia()) return null;
+  const when = h && h.value ? new Date(`${d.value}T${h.value}:00`) : null;
+  if (h) h.classList.toggle('bad', !!when && when <= Date.now());
+  if (when && when <= Date.now()) return null;
+  return { dia:d.value, when };
+}
+const progInit = t => [t && t.dia && t.dia >= hoyDia() ? t.dia : addDias(hoyDia(), 1), t && t.alarma.activa ? horaLocal(t.alarma.fechaHora) : ''];
+const progLabel = t => !t.dia ? null : (t.alarma.activa ? fmtLong(t.alarma.fechaHora) : fmtDiaLargo(t.dia));
+function progField(id) {
+  const t = T(id);
+  if (editWhen && editWhen.id === id && editWhen.kind === 'prog') {
+    if (editWhen.custom) { const [d, h] = progInit(t); return progCustomHTML('prog', `commitProg('${id}')`, 'cancelWhen()', d, h); }
+    return `<span class="whenedit">${progPresets().map((x, i) => `<button class="pill" onclick="applyProgPreset('${id}',${i})">${x.label}</button>`).join('')}
+      <button class="pill add" onclick="customWhen()">Otra…</button>
+      <button class="xbtn" onclick="cancelWhen()" aria-label="Cancelar">✕</button></span>`;
+  }
+  const label = progLabel(t);
+  return `<button class="pill ${label?'set':'add'}" onclick="startWhen('${id}','prog')">${label || '+ agregar'}</button>`
+    + (label ? `<button class="xbtn" onclick="clearWhen('${id}','prog')" aria-label="Quitar">✕</button>` : '');
+}
+
+function whenField(kind, iso, id) {  // solo Plazo
   if (editWhen && editWhen.id === id && editWhen.kind === kind) {
     if (editWhen.custom) {
       return `<span class="whenedit"><input type="datetime-local" class="dtin" id="whenInput" value="${iso ? isoToLocal(iso) : nextHourLocal()}">
@@ -541,7 +650,7 @@ function openRowHTML(t) {
       <button class="fold" onclick="toggleOpen('${t.id}')" >Cerrar</button>
     </div>
     <div class="detail">
-      <div class="drow"><span class="k">Alarma</span>${whenField('alarma', t.alarma.activa ? t.alarma.fechaHora : null, t.id)}</div>
+      <div class="drow"><span class="k">Programar</span>${progField(t.id)}</div>
       <div class="drow"><span class="k">Plazo</span>${whenField('plazo', t.deadline, t.id)}</div>
       <div class="drow"><span class="k">Urgencia</span><span class="urg">${urg}</span></div>
       <div class="drow"><span class="k">Grupo</span><select class="gsel" onchange="setGroupOf('${t.id}',this.value)">${groups}</select></div>
@@ -565,9 +674,16 @@ function toast(msg) {
 // El campo de fecha no guarda hasta tocar OK: si hay otra hora elegida, avisa y devuelve true para que quien llama no salga.
 function pendingWhen() {
   if (!editWhen || !editWhen.custom) return false;
-  const inp = document.getElementById('whenInput'), t = T(editWhen.id);
+  const t = T(editWhen.id);
+  if (t && editWhen.kind === 'prog') {
+    const d = document.getElementById('progDia'), h = document.getElementById('progHora');
+    if (!d || (d.value + '|' + (h ? h.value : '')) === editWhen.orig) return false;
+    toast('Toca OK para guardar, o ✕ para descartar');
+    return true;
+  }
+  const inp = document.getElementById('whenInput');
   if (!inp || !inp.value || !t) return false;
-  const saved = editWhen.kind === 'alarma' ? (t.alarma.activa ? t.alarma.fechaHora : null) : t.deadline;
+  const saved = t.deadline;
   if (inp.value === (saved ? isoToLocal(saved) : editWhen.orig)) return false;
   toast('Toca OK para guardar la hora, o ✕ para descartarla');
   return true;
@@ -601,7 +717,21 @@ function setGroupOf(id, gid) {
   t.ambito = gid; t.manual = false; placeByRule(t); save(); render();
 }
 function startWhen(id, kind) { if (pendingWhen()) return; editWhen = { id, kind, custom:false }; render(); }
-function customWhen() { editWhen.custom = true; editWhen.orig = nextHourLocal(); render(); }
+function customWhen() { editWhen.custom = true; editWhen.orig = editWhen.kind === 'prog' ? progInit(T(editWhen.id)).join('|') : nextHourLocal(); render(); }
+function applyProgPreset(id, i) {
+  const t = T(id), p = progPresets()[i]; if (!t || !p) return;
+  editWhen = null;
+  setProgramada(t, p.dia, p.when);
+  save(); render();
+  if (p.when) enablePush().then(syncAlarmas);
+}
+function commitProg(id) {
+  const t = T(id), v = readProg('prog'); if (!t || !v) return;
+  editWhen = null;
+  setProgramada(t, v.dia, v.when);
+  save(); render();
+  if (v.when) enablePush().then(syncAlarmas);
+}
 function applyPreset(id, kind, i) {
   const x = presets(kind)[i]; if (!x) return;
   editWhen = null;
@@ -612,28 +742,19 @@ function commitWhen(id, kind) {
   const inp = document.getElementById('whenInput');
   const val = inp && inp.value;
   if (!val) { cancelWhen(); return; }
-  // Una alarma en el pasado no sirve: se marca el campo y se deja corregir
-  if (kind === 'alarma' && new Date(val) <= Date.now()) { inp.classList.add('bad'); return; }
   editWhen = null;
   setWhen(id, kind, val);
 }
 function setWhen(id, kind, val, isIso) {
   const t = T(id); if (!t || !val) return;
   const iso = isIso ? val : new Date(val).toISOString();
-  if (kind === 'plazo') t.deadline = iso;
-  else {
-    t.alarma = { activa:true, fechaHora:iso, disparada:false, perdida:false };
-    delete ultimoIntento[id];
-    save(); render();
-    enablePush().then(syncAlarmas);
-    return;
-  }
+  t.deadline = iso;
   save(); render();
 }
 function clearWhen(id, kind) {
   const t = T(id); if (!t) return;
   if (kind === 'plazo') t.deadline = null;
-  else { t.alarma = { activa:false, fechaHora:null, disparada:false }; cancelAlarm(id); }
+  else clearProgramada(t);
   save(); render();
 }
 function askDelete(id) {
@@ -705,7 +826,7 @@ function openAdd() {
   document.getElementById('addInput').value = '';
   document.getElementById('addFlash').textContent = '';
   document.getElementById('newGroupName').value = '';
-  addDraft = { alarma:null, deadline:null, prioridad:null, enHoy:true }; addEdit = null;
+  addDraft = { prog:null, deadline:null, prioridad:null, enHoy:true }; addEdit = null;
   renderAddDetails();
   renderChips(!ambitos.length);
   document.getElementById('addOverlay').classList.add('open');
@@ -719,6 +840,22 @@ function renderChips(showNew) {
   document.getElementById('newGroupRow').style.display = showNew ? 'flex' : 'none';
   if (showNew) document.getElementById('newGroupName').placeholder = ambitos.length ? 'Nombre del grupo' : 'Primer grupo (ej. Casa)';
 }
+// Programar en la hoja de agregar: addDraft.prog = { dia, when } o null
+function addProgField() {
+  const p = addDraft.prog;
+  if (addEdit && addEdit.kind === 'prog') {
+    if (addEdit.custom) { const [d, h] = progInit(null); return progCustomHTML('addProg', 'addCommitProg()', 'addCancelWhen()', d, h); }
+    return `<span class="whenedit">${progPresets().map((x, i) => `<button class="pill" onclick="addProgPreset(${i})">${x.label}</button>`).join('')}
+      <button class="pill add" onclick="addEdit.custom=true;renderAddDetails()">Otra…</button>
+      <button class="xbtn" onclick="addCancelWhen()" aria-label="Cancelar">✕</button></span>`;
+  }
+  const label = p ? (p.when ? fmtLong(p.when.toISOString()) : fmtDiaLargo(p.dia)) : null;
+  return `<button class="pill ${label?'set':'add'}" onclick="addEdit={kind:'prog',custom:false};renderAddDetails()">${label || '+ agregar'}</button>`
+    + (label ? `<button class="xbtn" onclick="addSetProg(null)" aria-label="Quitar">✕</button>` : '');
+}
+function addSetProg(p) { addDraft.prog = p; addDraft.enHoy = p ? p.dia <= hoyDia() : true; addEdit = null; renderAddDetails(); }
+function addProgPreset(i) { const x = progPresets()[i]; if (x) addSetProg({ dia:x.dia, when:x.when }); }
+function addCommitProg() { const v = readProg('addProg'); if (v) addSetProg(v); }
 function addWhenField(kind, iso) {
   if (addEdit && addEdit.kind === kind) {
     if (addEdit.custom) {
@@ -738,18 +875,17 @@ function renderAddDetails() {
   const urg = ['alta','media','baja'].map(p =>
     `<button class="${d.prioridad===p?'sel':''}" style="background:var(--${p})" onclick="addDraft.prioridad=addDraft.prioridad==='${p}'?null:'${p}';renderAddDetails()" aria-label="Urgencia ${p}"></button>`).join('');
   document.getElementById('addDetails').innerHTML = `
-    <div class="drow"><span class="k">Alarma</span>${addWhenField('alarma', d.alarma)}</div>
+    <div class="drow"><span class="k">Programar</span>${addProgField()}</div>
     <div class="drow"><span class="k">Plazo</span>${addWhenField('plazo', d.deadline)}</div>
     <div class="drow"><span class="k">Urgencia</span><span class="urg">${urg}</span></div>
     <div class="drow"><span class="k">Hoy</span><button class="pill hoy${d.enHoy?' on':''}" onclick="addDraft.enHoy=!addDraft.enHoy;renderAddDetails()">HOY</button></div>`;
 }
-function addSetWhen(kind, iso) { addDraft[kind === 'alarma' ? 'alarma' : 'deadline'] = iso; addEdit = null; renderAddDetails(); }
+function addSetWhen(kind, iso) { addDraft.deadline = iso; addEdit = null; renderAddDetails(); }
 function addPreset(kind, i) { const x = presets(kind)[i]; if (x) addSetWhen(kind, x.d.toISOString()); }
 function addCancelWhen() { addEdit = null; renderAddDetails(); }
 function addCommitWhen(kind) {
   const inp = document.getElementById('addWhenInput'); const val = inp && inp.value;
   if (!val) { addCancelWhen(); return; }
-  if (kind === 'alarma' && new Date(val) <= Date.now()) { inp.classList.add('bad'); return; }
   addSetWhen(kind, new Date(val).toISOString());
 }
 function pickGroup(id) { addGroup = id; renderChips(false); document.getElementById('addInput').focus(); }
@@ -778,10 +914,12 @@ function submitAdd() {
     const g = document.getElementById('newGroupName');
     if (g.value.trim()) createGroupFromSheet(); else { renderChips(true); g.focus(); return; }
   }
+  const pg = addDraft.prog;
   const t = {
     id:uid(), titulo, ambito:addGroup, prioridad:addDraft.prioridad, deadline:addDraft.deadline,
     enHoy:addDraft.enHoy, completada:false, completadaEn:null,
-    alarma:{ activa:!!addDraft.alarma, fechaHora:addDraft.alarma, disparada:false }, manual:false,
+    dia: pg ? pg.dia : null, diaAplicada: !(pg && pg.dia > hoyDia()),
+    alarma: pg && pg.when ? { activa:true, fechaHora:pg.when.toISOString(), disparada:false } : { activa:false, fechaHora:null, disparada:false }, manual:false,
     fechaCreacion:new Date().toISOString(), orden:0,
   };
   tasks.push(t); placeByRule(t);
@@ -789,7 +927,7 @@ function submitAdd() {
   lsSet(K.ultimo, addGroup);
   save(); render();
   if (t.alarma.activa) enablePush().then(syncAlarmas);
-  addDraft = { alarma:null, deadline:null, prioridad:null, enHoy:true }; addEdit = null; renderAddDetails();
+  addDraft = { prog:null, deadline:null, prioridad:null, enHoy:true }; addEdit = null; renderAddDetails();
   inp.value = ''; inp.focus();
   const f = document.getElementById('addFlash'); f.textContent = '✓ Agregada en ' + getAmbito(addGroup).nombre;
   setTimeout(() => { if (f.textContent.startsWith('✓')) f.textContent = ''; }, 1800);
@@ -1083,6 +1221,7 @@ function snoozeAt(val, isIso) {
   const iso = isIso ? val : new Date(val).toISOString();
   if (new Date(iso) <= Date.now()) return;
   t.alarma = { activa:true, fechaHora:iso, disparada:false, perdida:false, srv:false };
+  seguirAlarma(t);
   delete ultimoIntento[t.id];
   save(); closeAlarmSheet(); render();
   enablePush().then(syncAlarmas);
@@ -1100,7 +1239,7 @@ async function applyPendingSnoozes() {
     let changed = false;
     list.forEach(sn => {
       const t = T(sn.taskId);
-      if (t && !t.completada) { t.alarma = { activa:true, fechaHora:sn.at, disparada:false, perdida:false, srv:true }; changed = true; }
+      if (t && !t.completada) { t.alarma = { activa:true, fechaHora:sn.at, disparada:false, perdida:false, srv:true }; seguirAlarma(t); changed = true; }
     });
     if (changed) { save(); render(); }
   } catch(e) {}
@@ -1116,7 +1255,7 @@ function tick() {
   applyPendingSnoozes();
   syncAlarmas();
   checkAlarmas();
-  if (purgeCompleted()) { save(); render(); }
+  if (purgeCompleted() | aplicarProgramadas()) { save(); render(); }
 }
 setInterval(tick, 20000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
@@ -1199,6 +1338,7 @@ function onbFinish(skipGroups) {
 // ─── INIT ────────────────────────────────────────────────────────
 const esPrimeraVez = lsGet(K.tasks) === null && lsGet(K.ambitos) === null;
 load();
+aplicarProgramadas();
 queueSnapshot();
 applyTheme();
 render();
