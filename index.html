@@ -108,6 +108,8 @@
   .avrow .t { flex: 1; min-width: 0; font-size: 15px; word-break: break-word; }
   .avrow .w { font-size: 12px; color: var(--text-light); flex: none; }
   .avrow .w.late { color: var(--alta); font-weight: 600; }
+  .dupbox { margin: 12px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); }
+  .dupmsg { font-size: 14px; margin-bottom: 10px; word-break: break-word; }
   .opt { font-size: 12px; color: var(--text-light); }
   .xbtn { position: relative; z-index: 2; background: none; border: none; color: var(--text-light); font-size: 15px; cursor: pointer; padding: 8px 12px; margin: -4px 0; }
   .urg { display: flex; gap: 10px; }
@@ -210,7 +212,7 @@
     <div class="grab"></div>
     <div class="addrow">
       <input type="text" id="addInput" placeholder="Nueva tarea…" enterkeyhint="done" autocomplete="off"
-             onkeydown="if(event.key==='Enter'){event.preventDefault();submitAdd();}">
+             oninput="dupConfirmado=false;ocultarDup()" onkeydown="if(event.key==='Enter'){event.preventDefault();submitAdd();}">
       <button class="send" onclick="submitAdd()" aria-label="Agregar">✓</button>
     </div>
     <div class="chips" id="addChips"></div>
@@ -219,6 +221,7 @@
       <button class="send" onclick="createGroupFromSheet()" aria-label="Crear grupo">✓</button>
     </div>
     <div class="detail adddetail" id="addDetails"></div>
+    <div class="dupbox" id="addDup" style="display:none"></div>
     <div class="flash" id="addFlash"></div>
     <div style="text-align:right"><button class="linkbtn" onclick="closeAdd()">Cerrar</button></div>
   </div>
@@ -324,7 +327,7 @@ const ACENTOS = ['#e05a5a','#4a8fd4','#3fa66a','#8a6fd1','#d99a1e'];
 const RANK = { alta:0, media:1, baja:2 };
 const K = {
   tasks:'tareas_v2', ambitos:'tareas_ambitos_v1', name:'tareas_username',
-  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', widget:'tareas_widget', snapPend:'tareas_widget_pend', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo', aviso:'tareas_aviso',
+  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', widget:'tareas_widget', snapPend:'tareas_widget_pend', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo', aviso:'tareas_aviso', dupNo:'tareas_dup_no',
 };
 
 // ─── ESTADO ──────────────────────────────────────────────────────
@@ -483,6 +486,50 @@ function aplicarProgramadas() {
     if (!t.completada && t.dia && t.dia <= hoy && !t.diaAplicada) { t.enHoy = true; t.diaAplicada = true; cambio = true; }
   });
   return cambio;
+}
+
+// ─── DUPLICADOS ──────────────────────────────────────────────────
+// Al crear una tarea se estima la probabilidad de que repita otra pendiente: un puntaje
+// logístico sobre unas pocas señales del título, el grupo y la fecha. Solo avisa.
+const STOP = new Set(['a','al','algo','con','de','del','el','en','la','las','lo','los','mi','mis','para','por','que','se','su','sus','un','una','y','o','e','u']);
+const normTxt = x => String(x).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9ñ ]/g, ' ');
+function palabras(x) { return new Set(normTxt(x).split(/\s+/).filter(w => w.length > 1 && !STOP.has(w))); }
+function trigramas(x) {
+  const t = ' ' + normTxt(x).replace(/\s+/g, ' ').trim() + ' ', out = new Map();
+  for (let i = 0; i + 3 <= t.length; i++) { const g = t.slice(i, i + 3); out.set(g, (out.get(g) || 0) + 1); }
+  return out;
+}
+function dice(a, b) {
+  let inter = 0, na = 0, nb = 0;
+  a.forEach(v => na += v); b.forEach(v => nb += v);
+  a.forEach((v, g) => { if (b.has(g)) inter += Math.min(v, b.get(g)); });
+  return na + nb ? 2 * inter / (na + nb) : 0;
+}
+// Señales de un par (todas entre 0 y 1): palabras en común, contención, letras en común, mismo grupo, fecha cercana
+function senalesDup(a, b) {
+  const A = palabras(a.titulo), B = palabras(b.titulo);
+  let inter = 0; A.forEach(w => { if (B.has(w)) inter++; });
+  const union = A.size + B.size - inter;
+  const dist = a.dia && b.dia ? Math.abs((diaToDate(a.dia) - diaToDate(b.dia)) / 864e5) : null;
+  return [
+    union ? inter / union : 0,
+    A.size && B.size ? inter / Math.min(A.size, B.size) : 0,
+    dice(trigramas(a.titulo), trigramas(b.titulo)),
+    a.ambito === b.ambito ? 1 : 0,
+    dist === null ? 0 : (dist === 0 ? 1 : dist <= 2 ? 0.5 : 0),
+  ];
+}
+const DUP_W0 = [4, 2, 3, 1, 0.5], DUP_B0 = -6, DUP_UMBRAL = 0.7;
+const sigmoide = z => 1 / (1 + Math.exp(-z));
+function probDup(x) { return sigmoide(DUP_B0 + x.reduce((s, v, i) => s + DUP_W0[i] * v, 0)); }
+const parKey = (a, b) => [normTxt(a).trim(), normTxt(b).trim()].sort().join('|');
+const dupDescartados = () => new Set(lsJSON(K.dupNo, []));
+// Tareas pendientes que probablemente repiten a `nueva` (las ya descartadas como no duplicadas no vuelven a salir)
+function posiblesDuplicadas(nueva) {
+  const no = dupDescartados();
+  return tasks.filter(t => !t.completada && t.id !== nueva.id && !no.has(parKey(t.titulo, nueva.titulo)))
+    .map(t => ({ t, p: probDup(senalesDup(nueva, t)) }))
+    .filter(x => x.p >= DUP_UMBRAL).sort((a, b) => b.p - a.p).slice(0, 3);
 }
 
 // ─── ORDEN ───────────────────────────────────────────────────────
@@ -911,6 +958,7 @@ function openAdd() {
   document.getElementById('addInput').value = '';
   document.getElementById('addFlash').textContent = '';
   document.getElementById('newGroupName').value = '';
+  dupConfirmado = false; ocultarDup();
   addDraft = { prog:null, deadline:null, prioridad:null, enHoy:true }; addEdit = null;
   renderAddDetails();
   renderChips(!ambitos.length);
@@ -992,6 +1040,32 @@ function createGroupFromSheet() {
   renderChips(false); render();
   document.getElementById('addInput').focus();
 }
+// Aviso de posible duplicado en la hoja de agregar: no bloquea
+let dupConfirmado = false;
+function ocultarDup() { document.getElementById('addDup').style.display = 'none'; }
+function mostrarDup(dup, nueva) {
+  const box = document.getElementById('addDup');
+  box.innerHTML = `<div class="dupmsg">Se parece a ${dup.map(x => `«${esc(x.t.titulo)}»${x.t.dia ? ' (' + fmtDia(x.t.dia) + ')' : ''}`).join(', ')}.</div>
+    <div class="btnrow"><button class="btn2" onclick="dupResolver(false)">No es duplicada</button><button class="btn2" onclick="dupResolver(true)">Es duplicada</button></div>`;
+  box.style.display = 'block';
+  box._dup = { dup, titulo: nueva.titulo };
+}
+function dupResolver(esDuplicada) {
+  const box = document.getElementById('addDup'), info = box._dup;
+  if (!info) return;
+  if (esDuplicada) {
+    ocultarDup();
+    document.getElementById('addInput').value = '';
+    const f = document.getElementById('addFlash'); f.textContent = 'No se agregó: ya existe';
+    setTimeout(() => { if (f.textContent.startsWith('No se agregó')) f.textContent = ''; }, 2200);
+    return;
+  }
+  const no = dupDescartados();
+  info.dup.forEach(x => no.add(parKey(x.t.titulo, info.titulo)));
+  lsSet(K.dupNo, JSON.stringify([...no].slice(-300)));
+  dupConfirmado = true;
+  submitAdd();
+}
 function submitAdd() {
   const inp = document.getElementById('addInput'); const titulo = inp.value.trim();
   if (!titulo) { inp.focus(); return; }
@@ -1000,6 +1074,12 @@ function submitAdd() {
     if (g.value.trim()) createGroupFromSheet(); else { renderChips(true); g.focus(); return; }
   }
   const pg = addDraft.prog;
+  const nueva = { titulo, ambito:addGroup, dia: pg ? pg.dia : null };
+  if (!dupConfirmado) {
+    const dup = posiblesDuplicadas(nueva);
+    if (dup.length) { mostrarDup(dup, nueva); return; }
+  }
+  dupConfirmado = false; ocultarDup();
   const t = {
     id:uid(), titulo, ambito:addGroup, prioridad:addDraft.prioridad, deadline:addDraft.deadline,
     enHoy:addDraft.enHoy, completada:false, completadaEn:null,
