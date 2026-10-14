@@ -60,6 +60,10 @@
   .ghead .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
   .ghead .name { font-size: 12px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--text-mid); }
   .ghead .count { font-size: 12px; color: var(--text-light); }
+  .ghead.static { cursor: default; }
+  .gtag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-light); flex: none; max-width: 90px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .gtag i { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .none { padding: 12px 0 4px 36px; font-size: 13px; color: var(--text-light); }
   .ghead .chev { margin-left: auto; color: var(--text-light); font-size: 12px; }
 
   /* ─── Fila de tarea ─── */
@@ -188,6 +192,7 @@
   <div class="seg" id="seg">
     <button id="segTodas" onclick="setScope('todas')">Todas</button>
     <button id="segHoy" onclick="setScope('hoy')">HOY</button>
+    <button id="segProx" onclick="setScope('prox')">Próximos</button>
   </div>
 </div>
 
@@ -493,6 +498,8 @@ function render() {
   document.getElementById('who').innerHTML = userName ? ` · <span class="acc">${esc(userName)}</span>` : '';
   document.getElementById('segTodas').classList.toggle('on', scope === 'todas');
   document.getElementById('segHoy').classList.toggle('on', scope === 'hoy');
+  document.getElementById('segProx').classList.toggle('on', scope === 'prox');
+  if (scope === 'prox') { document.getElementById('list').innerHTML = missedHTML() + proxHTML(); return; }
 
   let html = '', shown = 0;
   ambitos.forEach(a => {
@@ -506,7 +513,7 @@ function render() {
         <span class="name">${esc(a.nombre)}</span><span class="count">${pend.length || ''}</span>
         <span class="chev">${fold ? '▸' : '▾'}</span>
       </div>`;
-    if (!fold) html += `<div class="rows">${pend.map(rowHTML).join('')}${done.map(rowHTML).join('')}</div>`;
+    if (!fold) html += `<div class="rows">${pend.map(t => rowHTML(t)).join('')}${done.map(t => rowHTML(t)).join('')}</div>`;
     html += `</section>`;
   });
 
@@ -518,6 +525,27 @@ function render() {
     html += `<div class="empty"><b>Sin tareas</b>Toca + para agregar la primera.</div>`;
   }
   document.getElementById('list').innerHTML = missedHTML() + html;
+}
+
+// Vista de próximos: HOY y, debajo, cada día con tareas programadas (Mañana siempre se muestra)
+function proxHTML() {
+  const hoy = hoyDia();
+  const gi = t => ambitos.findIndex(a => a.id === t.ambito);
+  const porGrupo = (a, b) => gi(a) - gi(b) || byOrden(a, b);
+  const seccion = (titulo, pend, done, vacio) => `<section class="group"><div class="ghead static">
+      <span class="name">${titulo}</span><span class="count">${pend.length || ''}</span></div>
+      <div class="rows">${pend.concat(done).map(t => rowHTML(t, true)).join('') || `<p class="none">${vacio}</p>`}</div></section>`;
+  const hoyPend = tasks.filter(t => t.enHoy && !t.completada).sort(porGrupo);
+  const hoyDone = tasks.filter(t => t.enHoy && t.completada).sort((a, b) => new Date(a.completadaEn) - new Date(b.completadaEn));
+  let html = seccion('HOY · ' + fmtDiaLargo(hoy), hoyPend, hoyDone, 'Nada marcado para HOY');
+  const futuras = tasks.filter(t => !t.completada && t.dia && t.dia > hoy);
+  const dias = [...new Set(futuras.map(t => t.dia).concat(addDias(hoy, 1)))].sort();
+  dias.forEach(d => {
+    const delDia = futuras.filter(t => t.dia === d).sort((a, b) =>
+      (a.alarma.activa ? new Date(a.alarma.fechaHora).getTime() : Infinity) - (b.alarma.activa ? new Date(b.alarma.fechaHora).getTime() : Infinity) || porGrupo(a, b));
+    html += seccion((diasHasta(d) === 1 ? 'Mañana · ' : '') + fmtDiaLargo(d), delDia, [], 'Nada programado');
+  });
+  return html;
 }
 
 function missedList() {
@@ -554,13 +582,16 @@ function metaHTML(t) {
   return parts.length ? `<span class="meta">${parts.join('')}</span>` : '';
 }
 
-function rowHTML(t) {
+// En la vista de próximos (prox) la fila no se arrastra y muestra su grupo
+function rowHTML(t, prox) {
   const cls = t.completada ? ' done' : '';
   if (openId === t.id && !t.completada) return openRowHTML(t);
+  const a = prox ? getAmbito(t.ambito) : null;
+  const drag = prox ? '' : `onpointerdown="dragStart(event,'${t.id}')" `;
   return `<div class="row${cls}" data-id="${t.id}">
-    <div class="line" ${t.completada ? '' : `onpointerdown="dragStart(event,'${t.id}')" onclick="toggleOpen('${t.id}')"`}>
+    <div class="line" ${t.completada ? '' : `${drag}onclick="toggleOpen('${t.id}')"`}>
       <button class="check" onclick="toggleComplete('${t.id}',event)" onpointerdown="event.stopPropagation()" aria-label="Completar"></button>
-      <span class="title">${esc(t.titulo)}</span>${metaHTML(t)}
+      <span class="title">${esc(t.titulo)}</span>${a ? `<span class="gtag"><i style="background:${esc(a.color)}"></i>${esc(a.nombre)}</span>` : ''}${metaHTML(t)}
     </div>
   </div>`;
 }
