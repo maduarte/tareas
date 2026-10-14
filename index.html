@@ -1003,8 +1003,9 @@ function snapshotBody() {
   const f = new Date(), p = n => String(n).padStart(2, '0');
   const items = [];
   ambitos.forEach(a => tasks.filter(t => t.ambito === a.id && t.enHoy && !t.completada).sort(byOrden)
-    .forEach(t => items.push({ titulo:t.titulo, grupo:a.nombre, urgencia:t.prioridad || null, plazo:t.deadline || null })));
-  return JSON.stringify({ code:syncCode(), fecha:`${f.getFullYear()}-${p(f.getMonth()+1)}-${p(f.getDate())}`, items });
+    .forEach(t => items.push({ titulo:t.titulo, grupo:a.nombre, color:a.color, urgencia:t.prioridad || null, plazo:t.deadline || null,
+      alarma:t.alarma.activa ? t.alarma.fechaHora : null })));
+  return JSON.stringify({ code:syncCode(), fecha:`${f.getFullYear()}-${p(f.getMonth()+1)}-${p(f.getDate())}`, nombre:userName, acento:prefs.acento, items });
 }
 // Con retraso para agrupar cambios seguidos; si no llega al servidor queda pendiente y se reintenta
 function queueSnapshot() {
@@ -1039,7 +1040,7 @@ async function toggleWidget() {
 async function renderWidgetInfo() {
   const on = widgetOn();
   document.getElementById('widgetInfo').textContent = on
-    ? 'Activo: este dispositivo publica la lista de HOY (título, grupo, urgencia y plazo) para el widget del Mac. Copia los datos del widget y pégalos en el archivo de configuración del Mac. Solo permite leer.'
+    ? 'Activo: este dispositivo publica la lista de HOY (título, grupo, urgencia, plazo y alarma) y tu nombre para el widget del Mac. Copia los datos del widget y pégalos en el archivo de configuración del Mac. Solo permite leer.'
     : 'Publica la lista de HOY en el servidor para verla en el widget del Mac. Es de solo lectura; marcar tareas se hace aquí.';
   document.getElementById('widgetBtn').textContent = on ? 'Desactivar' : 'Activar';
   document.getElementById('widgetCopy').style.display = on ? '' : 'none';

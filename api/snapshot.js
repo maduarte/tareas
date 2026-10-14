@@ -1,7 +1,7 @@
 // api/snapshot.js
 // Instantánea de solo lectura de la lista de HOY, para el widget del Mac.
 //
-//   POST   /api/snapshot  { code, fecha, items:[{titulo,grupo,urgencia,plazo}] }  → { ok }
+//   POST   /api/snapshot  { code, fecha, nombre, acento, items:[{titulo,grupo,color,urgencia,plazo,alarma}] }  → { ok }
 //   GET    /api/snapshot?token=<64hex>   → { at, fecha, items }   (404 si no hay)
 //   DELETE /api/snapshot?code=<32hex>    → { ok }
 //
@@ -15,18 +15,21 @@ const TTL_SNAP = 60 * 60 * 24 * 30; // sin actualizarse en 30 días, se borra
 const MAX_ITEMS = 100;
 const URGENCIAS = new Set(['alta', 'media', 'baja']);
 const FECHA_RE = /^\d{4}-\d{2}-\d{2}$/;
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const isoOrNull = (v) => (typeof v === 'string' && Number.isFinite(new Date(v).getTime()) ? new Date(v).toISOString() : null);
 
 function cleanItems(raw) {
   if (!Array.isArray(raw) || raw.length > MAX_ITEMS) return null;
   const out = [];
   for (const it of raw) {
     if (!it || typeof it.titulo !== 'string' || !it.titulo.trim()) return null;
-    const plazo = typeof it.plazo === 'string' && Number.isFinite(new Date(it.plazo).getTime()) ? new Date(it.plazo).toISOString() : null;
     out.push({
       titulo: it.titulo.trim().slice(0, 200),
       grupo: typeof it.grupo === 'string' ? it.grupo.trim().slice(0, 60) : '',
+      color: HEX_RE.test(it.color) ? it.color : null,
       urgencia: URGENCIAS.has(it.urgencia) ? it.urgencia : null,
-      plazo
+      plazo: isoOrNull(it.plazo),
+      alarma: isoOrNull(it.alarma)
     });
   }
   return out;
@@ -58,13 +61,17 @@ export default async function handler(req, res) {
       return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { code: rawCode, fecha, items: rawItems } = req.body || {};
+    const { code: rawCode, fecha, nombre, acento, items: rawItems } = req.body || {};
     const code = normCode(rawCode);
     const items = cleanItems(rawItems);
     if (!validCode(code) || !FECHA_RE.test(String(fecha || '')) || !items) {
       return res.status(400).json({ error: 'Datos inválidos.' });
     }
-    const snap = { at: new Date().toISOString(), fecha, items };
+    const snap = {
+      at: new Date().toISOString(), fecha, items,
+      nombre: typeof nombre === 'string' ? nombre.trim().slice(0, 40) : '',
+      acento: HEX_RE.test(acento) ? acento : null
+    };
     await cmd(db, ['SET', keys.snap(await readToken(code)), JSON.stringify(snap), 'EX', TTL_SNAP]);
     return res.status(200).json({ ok: true });
   } catch (err) {
