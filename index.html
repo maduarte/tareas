@@ -104,6 +104,10 @@
   .okbtn { font-family: var(--font); font-size: 14px; font-weight: 600; background: var(--accent); color: #fff; border: none; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
   .toast { position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom)); transform: translate(-50%, 12px); max-width: calc(100% - 32px); background: var(--text); color: var(--bg); font-size: 14px; padding: 10px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 50; text-align: center; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  .avrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .avrow .t { flex: 1; min-width: 0; font-size: 15px; word-break: break-word; }
+  .avrow .w { font-size: 12px; color: var(--text-light); flex: none; }
+  .avrow .w.late { color: var(--alta); font-weight: 600; }
   .opt { font-size: 12px; color: var(--text-light); }
   .xbtn { position: relative; z-index: 2; background: none; border: none; color: var(--text-light); font-size: 15px; cursor: pointer; padding: 8px 12px; margin: -4px 0; }
   .urg { display: flex; gap: 10px; }
@@ -293,6 +297,16 @@
   </div>
 </div>
 
+<!-- PLAZOS POR PLANIFICAR -->
+<div class="overlay" id="avOverlay" onclick="if(event.target===this)closeAviso()">
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="shead"><h2>Plazos por planificar</h2><button class="linkbtn" onclick="closeAviso()">Listo</button></div>
+    <p class="hint" id="avHint" style="margin:0 0 6px"></p>
+    <div id="avList"></div>
+  </div>
+</div>
+
 <!-- INICIALIZACIÓN -->
 <div class="onb" id="onb"><div class="onb-in" id="onbBody"></div></div>
 
@@ -310,7 +324,7 @@ const ACENTOS = ['#e05a5a','#4a8fd4','#3fa66a','#8a6fd1','#d99a1e'];
 const RANK = { alta:0, media:1, baja:2 };
 const K = {
   tasks:'tareas_v2', ambitos:'tareas_ambitos_v1', name:'tareas_username',
-  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', widget:'tareas_widget', snapPend:'tareas_widget_pend', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo',
+  tema:'tareas_tema', onb:'tareas_onboarded', codigo:'tareas_codigo', push:'tareas_push', widget:'tareas_widget', snapPend:'tareas_widget_pend', acento:'tareas_acento', plegados:'tareas_plegados', ultimo:'tareas_ultimo_grupo', aviso:'tareas_aviso',
 };
 
 // ─── ESTADO ──────────────────────────────────────────────────────
@@ -527,6 +541,46 @@ function render() {
   document.getElementById('list').innerHTML = missedHTML() + html;
 }
 
+// ─── PLAZOS POR PLANIFICAR ───────────────────────────────────────
+// Tareas con Plazo hasta el siguiente día hábil (o vencido) que no están programadas ni en HOY.
+// Se ofrecen una vez, en la primera apertura de cada día, para elegir cuáles activar hoy.
+function plazosSinPlan() {
+  const fin = proxHabil(hoyDia());
+  return tasks.filter(t => !t.completada && t.deadline && !t.enHoy && !t.dia && diaKey(t.deadline) <= fin)
+    .sort((a, b) => new Date(a.deadline) - new Date(b.deadline));
+}
+let avIds = [];
+function openAviso() {
+  avIds = plazosSinPlan().map(t => t.id);
+  if (!avIds.length) return;
+  renderAviso();
+  document.getElementById('avOverlay').classList.add('open');
+}
+function closeAviso() { document.getElementById('avOverlay').classList.remove('open'); render(); }
+function renderAviso() {
+  const fin = proxHabil(hoyDia());
+  document.getElementById('avHint').textContent = `Vencen hasta ${diasHasta(fin) === 1 ? 'mañana' : 'el ' + fmtDiaLargo(fin)} (o ya vencieron) y no están en HOY. Marca las que harás hoy.`;
+  document.getElementById('avList').innerHTML = avIds.map(id => {
+    const t = T(id); if (!t) return '';
+    const late = new Date(t.deadline) < new Date();
+    return `<div class="avrow"><span class="t">${esc(t.titulo)}</span><span class="w${late?' late':''}">${fmtShort(t.deadline)}</span>
+      <button class="pill hoy${t.enHoy?' on':''}" onclick="avToggle('${id}')">HOY</button></div>`;
+  }).join('');
+}
+function avToggle(id) { const t = T(id); if (!t) return; t.enHoy = !t.enHoy; save(); renderAviso(); }
+function avisoBanner() {
+  const n = plazosSinPlan().length;
+  return n ? `<div class="missed"><div class="mh"><span>📌 ${n === 1 ? 'Un plazo por planificar' : n + ' plazos por planificar'}</span>
+    <button class="linkbtn" onclick="openAviso()">Ver</button></div></div>` : '';
+}
+// Una vez al día, en la primera apertura
+function checkAvisoDiario() {
+  const hoy = hoyDia();
+  if (lsGet(K.aviso) === hoy || !lsGet(K.onb)) return;
+  lsSet(K.aviso, hoy);
+  openAviso();
+}
+
 // Vista de próximos: HOY y, debajo, cada día con tareas programadas (Mañana siempre se muestra)
 function proxHTML() {
   const hoy = hoyDia();
@@ -537,7 +591,7 @@ function proxHTML() {
       <div class="rows">${pend.concat(done).map(t => rowHTML(t, true)).join('') || `<p class="none">${vacio}</p>`}</div></section>`;
   const hoyPend = tasks.filter(t => t.enHoy && !t.completada).sort(porGrupo);
   const hoyDone = tasks.filter(t => t.enHoy && t.completada).sort((a, b) => new Date(a.completadaEn) - new Date(b.completadaEn));
-  let html = seccion('HOY · ' + fmtDiaLargo(hoy), hoyPend, hoyDone, 'Nada marcado para HOY');
+  let html = avisoBanner() + seccion('HOY · ' + fmtDiaLargo(hoy), hoyPend, hoyDone, 'Nada marcado para HOY');
   const futuras = tasks.filter(t => !t.completada && t.dia && t.dia > hoy);
   const dias = [...new Set(futuras.map(t => t.dia).concat(addDias(hoy, 1)))].sort();
   dias.forEach(d => {
@@ -1289,12 +1343,12 @@ function tick() {
   if (purgeCompleted() | aplicarProgramadas()) { save(); render(); }
 }
 setInterval(tick, 20000);
-document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(); checkAvisoDiario(); } });
 
 // ─── TECLADO ─────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  closeAdd(); closeSettings(); closeAlarmSheet();
+  closeAdd(); closeSettings(); closeAlarmSheet(); closeAviso();
 });
 
 // ─── INICIALIZACIÓN (primer uso) ─────────────────────────────────
@@ -1379,6 +1433,7 @@ applyPendingSnoozes().then(() => {
   if (id) { history.replaceState(null, '', location.pathname); openAlarmSheet(id); }
 });
 if (lsGet(K.push) === '1') enablePush().then(syncAlarmas);
+checkAvisoDiario();
 if (!lsGet(K.onb)) {
   if (esPrimeraVez) startOnboarding(true);
   else if (!userName) startOnboarding(false);
