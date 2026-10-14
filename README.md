@@ -8,11 +8,13 @@ Lista de tareas personal construida como PWA (Progressive Web App): una sola pá
 - Todas las tareas se muestran ordenadas por grupo, en secciones plegables (el estado plegado se recuerda).
 - Cada tarea es una línea. A la derecha solo aparece lo que hayas configurado: punto de urgencia, plazo y alarma.
 - Completar una tarea la tacha y la baja al final de su grupo. **Al terminar el día las completadas se borran** (no hay archivo).
-- Filtro **Todas / HOY**. Al abrir la app se muestra HOY.
+- Filtro **Todas / HOY / Próximos**. Al abrir la app se muestra HOY.
+- **Próximos**: HOY y, debajo, cada día con tareas programadas (Mañana siempre aparece). Cada fila muestra además su grupo.
 
 ### Detalle opcional
 Al tocar una línea se despliega en el mismo lugar, en este orden:
-- **Alarma**: notificación a la hora elegida. Atajos de un toque: *En 10 min*, *Hoy 18:00* (si aún no pasó) y *Mañana 9:00*; *Otra…* abre el selector de fecha y hora.
+- **Programar**: el día en que piensas hacer la tarea, con una hora opcional que dispara la notificación. Atajos de un toque: *En 10 min*, *Hoy 18:00* (si aún no pasó), *Mañana*, *Lunes* (si mañana no es día hábil) y *En 1 semana*; *Otra…* abre el día y la hora (opcional) y se confirma con OK.
+  - Si la fecha es futura, la tarea **sale de HOY y entra sola ese día**; si es hoy, entra a HOY de inmediato. Quitarla de HOY después es manual. Las programadas a futuro siguen visibles en Todas con su día (📅).
 - **Plazo**: fecha y hora límite (se marca en rojo si venció). Atajos: *Mañana 18:00*, *En 3 días* y *En 1 semana* (a las 18:00); *Otra…* abre el selector.
 - **Urgencia**: alta (rojo), media (amarillo) o baja (verde). Sin urgencia por defecto.
 - **Grupo**: cambiar la tarea de grupo.
@@ -32,6 +34,12 @@ Al abrir la app por primera vez pregunta el nombre, el modo (automático / claro
 
 ### Apariencia
 Modo claro y oscuro (automático según el sistema, o fijo), con cinco colores de acento. Se cambian en Ajustes (⚙).
+
+### Plazos por planificar
+La primera vez que abres la app cada día, si hay tareas con **Plazo hasta el siguiente día hábil** (o ya vencido) que no están programadas ni en HOY, se ofrece una hoja para elegir cuáles activar hoy. Los días hábiles son lunes a viernes: un viernes la ventana llega hasta el lunes. Después se consulta desde el aviso 📌 de la vista Próximos.
+
+### Duplicados
+Al agregar una tarea parecida a otra pendiente, la app avisa («No es duplicada» / «Es duplicada»). Estima la probabilidad con una regresión logística sobre pocas señales (palabras en común, contención, letras, mismo grupo, fecha cercana, título idéntico) y **aprende de tus respuestas**, solo en el dispositivo. «Reiniciar aprendizaje» está en Ajustes.
 
 ### Alarmas
 - Notificación del navegador a la hora programada. Se revisa cada 20 segundos y al volver a la app.
@@ -66,6 +74,9 @@ Datos guardados en `localStorage`, aislados por dispositivo y navegador (no se s
 | `tareas_onboarded` | El primer uso ya se completó |
 | `tareas_codigo` | Código aleatorio del dispositivo (identifica sus alarmas en el servidor) |
 | `tareas_push` | `1` si este dispositivo activó el push |
+| `tareas_aviso` | Día (`AAAA-MM-DD`) del último aviso de plazos por planificar |
+| `tareas_dup_no` | Pares de títulos ya descartados como no duplicados |
+| `tareas_dup_w` | Pesos aprendidos del detector de duplicados |
 | `tareas_widget` | `1` si este dispositivo publica la lista de HOY para el widget del Mac |
 | `tareas_widget_pend` | `1` si hay una instantánea sin subir (se reintenta) |
 

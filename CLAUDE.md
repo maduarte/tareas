@@ -24,7 +24,7 @@ api/                funciones serverless de Vercel (SIN package.json)
   alarms/due.js     lo llama el service worker: devuelve las alarmas que tocan
   cron/queue.js     cron diario: encola en QStash las alarmas que entran en su ventana de 24 h
   _alarms.js        cola de QStash y envío de push compartidos
-  snapshot.js       POST/GET/DELETE de la instantánea de HOY para el widget del Mac (lectura por token derivado)
+  snapshot.js       POST/GET/DELETE de la instantánea de HOY y de lo programado hasta el siguiente día hábil, para el widget del Mac (lectura por token derivado)
 widget/             widget de escritorio para Mac (Swift/AppKit, sin Xcode): build.sh, install.sh, uninstall.sh
 tools/vapid-keys.mjs  genera las claves VAPID (se corre a mano)
 diseno/mockup.html  mockup estático del diseño
@@ -37,6 +37,8 @@ diseno/mockup.html  mockup estático del diseño
 - **QStash es multi-región**: cada cuenta vive en una región y debe usar su URL regional (`QSTASH_URL`); con el endpoint global falla con "user not found in this region".
 - **QStash gratuito solo acepta 24 h de retraso.** Las alarmas más lejanas se guardan sin encolar (índice `tareas:pending`) y el cron diario de Vercel las encola. Hobby permite un cron por día, con jitter de hasta una hora: por eso corre a las 07:00 UTC (de madrugada en Chile).
 - **Push sin payload**: el service worker pide los títulos a `/api/alarms/due`. Cada push debe terminar en una notificación visible (iOS lo exige).
+- **Programar:** cada tarea tiene `dia` (`AAAA-MM-DD`) y, si lleva hora, `alarma.fechaHora` que cae siempre en ese día (`normalize` lo fuerza y migra las alarmas antiguas). Regla de HOY con prioridad (`setProgramada`): día futuro → sale de HOY y `diaAplicada = false`; hoy o antes → entra a HOY. `aplicarProgramadas()` (al abrir y en cada `tick`) mete en HOY, una sola vez, lo que llegó a su día; quitarlo de HOY después es manual. Posponer una alarma mueve el día (`seguirAlarma`). Los días hábiles son lunes a viernes (`proxHabil`).
+- **Duplicados:** `probDup` es una regresión logística con pesos de partida (`DUP_W0`) ajustados online con `aprenderDup` (clamp y tirón hacia los pesos de partida). Solo se entrena con respuestas explícitas. Si se cambian las señales de `senalesDup`, el largo de `DUP_W0` debe coincidir: un modelo guardado con otro largo se descarta.
 - **Posponer:** la notificación lleva `data:{taskId,titulo}` y una acción `snooze10`. El service worker reprograma en el servidor y deja el cambio en `tareas-meta` (`/__snooze`); la app lo aplica a la tarea al abrirse. Tocar la notificación abre `./?alarma=<id>` o manda un mensaje al cliente abierto, y la app muestra la hoja de alarma.
 - **Sonido:** no es controlable desde la web (lo fija el sistema); no prometer sonidos propios ni tonos persistentes.
 - **Campos de fecha (`datetime-local`) en iOS:** dispara `change` al abrir el selector (con la hora actual) y en cada giro de la rueda. Nunca guardar ni redibujar en `change`: se destruye el input y el selector se cierra. El flujo actual muestra el campo visible y confirma con un botón OK (`startWhen`/`commitWhen`, `snoozeFromPick`).

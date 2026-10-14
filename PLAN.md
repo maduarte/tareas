@@ -85,7 +85,18 @@ Widget de **solo lectura** con la lista de HOY, al fondo del escritorio. Marcar 
 - Para actualizar el widget tras cambiar `widget/main.swift`: `./widget/install.sh` (recompila si falta `build/`; borra `widget/build` para forzarlo).
 - Descartado para el widget: marcar tareas, notificaciones propias en el Mac. El espejo de notificaciones de iOS no funcionó en las pruebas (problema del sistema); si se quiere, la alternativa es guardar varias suscripciones push por código.
 
-### Fase E: programar tareas y vista de Mañana (idea, por diseñar; anotada el 14-oct-2026)
+### Fase E: programar tareas y vista de Mañana (construida el 14-oct-2026)
+Hecho, un commit por cambio y cada uno sobre el anterior:
+- [x] Programar: campo `dia` + hora opcional, migración de alarmas, regla de HOY y entrada automática (reemplaza Alarma).
+- [x] Vista **Próximos** (HOY + cada día con tareas programadas; Mañana siempre visible).
+- [x] Aviso diario de **plazos por planificar** (primera apertura del día, hasta el siguiente día hábil) y su banner en Próximos.
+- [x] Detector de duplicados v1 (puntaje logístico con pesos a mano, umbral 0.7, memoria de pares descartados).
+- [x] Detector v2: aprendizaje en línea con las respuestas, señal de título idéntico y reinicio en Ajustes.
+- [x] Widget: sección de lo programado hasta el siguiente día hábil.
+- Sin probar en dispositivo real: la interfaz nueva se probó con pruebas de lógica en Node (modelo, reglas, detector, instantánea), no en el iPhone. Para actualizar el widget: `./widget/install.sh`.
+- Pendiente de decidir (sin construir): detector al *programar* una tarea existente (hoy solo al crear), feriados en los días hábiles, y mostrar en Próximos las tareas que solo tienen Plazo.
+
+Texto original de la idea, para referencia:
 Inspirada en Things 3. Nada de esto está construido; son decisiones por tomar antes de tocar código.
 
 **1. «Programar» en lugar de «Alarma».** El fin de la alarma es decidir *cuándo* se hace una tarea. En vez de una hora de aviso, la tarea se programa para un día (y opcionalmente una hora, que es la que dispara la notificación).
