@@ -85,6 +85,27 @@ Widget de **solo lectura** con la lista de HOY, al fondo del escritorio. Marcar 
 - Para actualizar el widget tras cambiar `widget/main.swift`: `./widget/install.sh` (recompila si falta `build/`; borra `widget/build` para forzarlo).
 - Descartado para el widget: marcar tareas, notificaciones propias en el Mac. El espejo de notificaciones de iOS no funcionó en las pruebas (problema del sistema); si se quiere, la alternativa es guardar varias suscripciones push por código.
 
+### Fase E: programar tareas y vista de Mañana (idea, por diseñar; anotada el 14-oct-2026)
+Inspirada en Things 3. Nada de esto está construido; son decisiones por tomar antes de tocar código.
+
+**1. «Programar» en lugar de «Alarma».** El fin de la alarma es decidir *cuándo* se hace una tarea. En vez de una hora de aviso, la tarea se programa para un día (y opcionalmente una hora, que es la que dispara la notificación).
+- Atajos de un toque: *Hoy*, *Esta noche*, *Mañana*, *En 3 días*, *Otra…* (los de hoy de Alarma se reaprovechan).
+- El día programado la tarea entra sola en HOY (`enHoy = true` al empezar ese día). Si tiene hora, además suena el push de siempre.
+- Una tarea programada para el futuro no ocupa la lista de HOY hasta su día. Dónde se ve mientras tanto es una decisión abierta (ver abajo).
+- Plazo sigue siendo distinto de Programar: Plazo = cuándo vence; Programar = cuándo la voy a hacer.
+
+**2. Vista con Mañana (y próximos días).** Además de Todas y HOY, una vista tipo calendario con HOY arriba y debajo Mañana y los días siguientes, con lo programado.
+
+**3. Rollover.** Lo que no se termina hoy debe quedar en HOY mañana. Hoy ya ocurre sin hacer nada: `enHoy` es manual y solo se quita a mano, así que no hay que construirlo. Lo que sí falta es lo contrario: que lo programado para mañana *entre* en HOY ese día.
+
+**Decisiones abiertas**
+- ¿Programar con hora y sin hora son lo mismo con un campo opcional, o dos campos? Propuesta: una sola fecha, la hora es opcional.
+- ¿Qué pasa con las alarmas ya existentes? Migrar `alarma.fechaHora` a «programada con hora».
+- ¿Dónde viven las tareas programadas a futuro: ocultas de Todas hasta su día (como Things) o visibles con una marca? Propuesta: visibles en Todas con la fecha, y también en la vista de próximos.
+- ¿Qué hace la vista de Mañana con tareas que solo tienen Plazo mañana? Propuesta: mostrarlas aparte, sin programarlas.
+- Impacto: `sw.js` y `api/alarms/*` siguen igual (la hora sigue siendo un push), cambia el modelo de datos en `index.html`, el texto del README y el widget (la instantánea podría llevar también las de mañana).
+- La regla actual «las tareas nuevas entran en HOY por defecto» choca con programar: una tarea con fecha futura no debería entrar en HOY.
+
 ### Fase C: pendiente de uso real
 - ~~Sync de tareas entre dispositivos~~: **descartado** (decisión del usuario, 9-oct-2026). Cada dispositivo guarda sus propias tareas.
 - ~~Probar en iPhone~~: **hecho**. Todas las pruebas se hicieron en iPhone (instalada en la pantalla de inicio).
