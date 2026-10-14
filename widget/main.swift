@@ -1,4 +1,4 @@
-// Widget de escritorio de Tareas: ventana sin marco que vive en la capa del
+// Widget de escritorio de ToDoi: ventana sin marco que vive en la capa del
 // escritorio (debajo de todas las apps, encima de los íconos). Solo lectura.
 // Lee la instantánea de HOY de /api/snapshot con el token de ~/.tareas-widget
 // (línea 1: dirección de la app; línea 2: código de lectura). Ver PLAN.md, Fase D.
@@ -403,8 +403,8 @@ final class Delegate: NSObject, NSApplicationDelegate {
         }
         if let a = aviso { pie = pie.isEmpty ? a : pie + " · " + a }
 
-        // Encabezado: "Tareas · Nombre", como la marca de la app
-        let marcaStr = NSMutableAttributedString(string: "Tareas", attributes: [.font: font(20, .bold), .foregroundColor: cText, .kern: s(-0.5)])
+        // Encabezado: "ToDoi · Nombre", como la marca de la app
+        let marcaStr = NSMutableAttributedString(string: "ToDoi", attributes: [.font: font(20, .bold), .foregroundColor: cText, .kern: s(-0.5)])
         if !nombre.isEmpty {
             marcaStr.append(NSAttributedString(string: " · ", attributes: [.font: font(20, .medium), .foregroundColor: cMid, .kern: s(-0.5)]))
             marcaStr.append(NSAttributedString(string: nombre, attributes: [.font: font(20, .medium), .foregroundColor: acento, .kern: s(-0.5)]))

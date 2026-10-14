@@ -47,6 +47,7 @@ diseno/logo/fuente/ generador de los SVG (python3 diseno/logo/fuente/generar.py,
 - Los errores del servidor van a `console.error`; al navegador solo un mensaje genérico.
 - El código de dispositivo (`tareas_codigo`, 32 hex) es la única credencial. Se genera en el dispositivo; nunca se muestra ni se registra.
 - Al cambiar `sw.js` o la lista de archivos precacheados, subir `CACHE`.
+- **Nombre: ToDoi.** El logo del encabezado (`<!--marca-->…<!--/marca-->` en `index.html`) y los íconos PNG los genera `diseno/logo/fuente/generar.py`; no editarlos a mano.
 
 ## Datos locales (`localStorage`)
 

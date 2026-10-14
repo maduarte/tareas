@@ -148,7 +148,7 @@ def marca(font, fg, accent, bg=None, trazo=True, g_To=-8.0, g_oD=8.0, g_Do=1.0, 
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W:.0f} {H}" width="{W:.0f}" height="{H}">{rect}'
             f'<g fill="{fg}">{body}</g>{extra}</svg>'), W, info
 
-def icono(info, stem, accent='#e05a5a', size=512):
+def icono(info, stem, accent='#e05a5a', size=512, rx=None):
     import pluma
     o2, sw = info['o2'], info['sw']
     x0, x1 = o2[0], info['tail_end']
@@ -156,6 +156,6 @@ def icono(info, stem, accent='#e05a5a', size=512):
     sc = 0.56 * size / (x1 - x0)
     tx, ty = size / 2 - sc * (x0 + x1) / 2, size / 2 - sc * (y0 + y1) / 2
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {size} {size}" width="{size}" height="{size}">'
-            f'<rect width="{size}" height="{size}" rx="{size*0.225}" fill="{accent}"/>'
+            f'<rect width="{size}" height="{size}" rx="{size*0.225 if rx is None else rx}" fill="{accent}"/>'
             f'<g transform="translate({tx:.1f} {ty:.1f}) scale({sc:.4f})"><path d="{info["o_d"]}" fill="#fff"/>'
             f'{pluma.svg(info["pd"], info["gotas"], stem)}</g></svg>')
