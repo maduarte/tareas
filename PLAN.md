@@ -74,14 +74,15 @@ Requiere backend, así que incluye la migración a Vercel.
 - [x] Posponer alarmas: botón *Posponer 10 min* en la notificación (no iOS) y hoja al tocarla con *Posponer 10 min*, *Elegir hora* y *Hecho*.
 - [x] Vibración y `requireInteraction` en las notificaciones. El sonido no es configurable desde la web: lo decide el teléfono.
 
-### Fase D: widget de escritorio para Mac (probado de punta a punta, 14-oct-2026)
+### Fase D: widget de escritorio para Mac (completa, 14-oct-2026)
 Widget de **solo lectura** con la lista de HOY, al fondo del escritorio. Marcar tareas se sigue haciendo en el celular. Reabre el sync de forma reducida: el celular publica una instantánea, el Mac solo lee (sin merge ni conflictos).
 - [x] Prototipo de la ventana (`widget/`, Swift/AppKit, solo Command Line Tools): nivel de escritorio, en todos los Spaces, fuera de Cmd-Tab, arrastrable. Probado con datos falsos.
 - [x] `widget/install.sh` y `uninstall.sh`: LaunchAgent con `RunAtLoad` y `KeepAlive`.
 - [x] Servidor: `POST` de la instantánea y `GET` de lectura, con token de solo lectura derivado del código. Clave `tareas:snapshot:<code>`.
 - [x] Celular: subir la instantánea de HOY tras cada cambio (retraso 1–2 s), marca de pendiente y reintento al abrir, al volver al primer plano y al recuperar la red.
 - [x] Widget: leer cada 2–5 min, mostrar "actualizado hace X" y atenuar si la instantánea es de otro día. Sin la hora de la alarma.
-- [ ] Instalar el arranque automático (`widget/install.sh`) cuando el usuario lo decida.
+- [x] Arranque automático instalado (`widget/install.sh`, 14-oct-2026). Escala por defecto 80 % (menú de clic derecho); clic en una fila la tacha solo en el Mac.
+- Para actualizar el widget tras cambiar `widget/main.swift`: `./widget/install.sh` (recompila si falta `build/`; borra `widget/build` para forzarlo).
 - Descartado para el widget: marcar tareas, notificaciones propias en el Mac. El espejo de notificaciones de iOS no funcionó en las pruebas (problema del sistema); si se quiere, la alternativa es guardar varias suscripciones push por código.
 
 ### Fase C: pendiente de uso real
