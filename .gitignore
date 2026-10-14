@@ -7,3 +7,6 @@ screenshots/
 
 # Binario del widget de escritorio (se compila con widget/build.sh)
 widget/build/
+
+# Caché de Python (diseno/logo/fuente/generar.py)
+__pycache__/

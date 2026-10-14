@@ -28,6 +28,8 @@ api/                funciones serverless de Vercel (SIN package.json)
 widget/             widget de escritorio para Mac (Swift/AppKit, sin Xcode): build.sh, install.sh, uninstall.sh
 tools/vapid-keys.mjs  genera las claves VAPID (se corre a mano)
 diseno/mockup.html  mockup estático del diseño
+diseno/logo.html    logo ToDoi (marca, ícono, alternativas); los SVG están en diseno/logo/
+diseno/logo/fuente/ generador de los SVG (python3 diseno/logo/fuente/generar.py, necesita fontTools)
 ```
 
 ## Convenciones

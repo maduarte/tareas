@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es-CL"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark"><title>ToDoi · logo</title>
+<style>
+  :root { --bg:#f8f7f5; --text:#2a2a2a; --mid:#555; --card:#fff; --border:#e8e5e0; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#1b1a19; --text:#ecebe8; --mid:#b9b6b1; --card:#242321; --border:#34322f; } }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding: 32px 16px 64px; line-height: 1.5; }
+  main { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 26px; letter-spacing: -.5px; } h2 { font-size: 13px; letter-spacing: .09em; text-transform: uppercase; color: var(--mid); margin: 36px 0 12px; }
+  p { color: var(--mid); font-size: 15px; margin-top: 8px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+  .card img { max-width: 100%; height: auto; border-radius: 10px; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } .pair figure { text-align: center; font-size: 13px; color: var(--mid); }
+  .sizes { display: flex; align-items: flex-end; gap: 20px; flex-wrap: wrap; } .sizes figure { text-align: center; font-size: 12px; color: var(--mid); }
+  .sizes img { display: block; margin: 0 auto 6px; }
+  @media (max-width: 520px) { .pair { grid-template-columns: 1fr; } }
+</style></head><body><main>
+<h1>ToDoi</h1>
+<p>To do + Today + i de inteligencia. La segunda «o» se vuelve «a» con un solo trazo de pluma: sin él se lee <b>ToDoi</b>, con él <b>ToDai</b>, que en español suena casi como <i>today</i>. La «i» final es minúscula y su punto llega a la altura de la T y la D.</p>
+
+<h2>La lectura doble</h2>
+<div class="card pair">
+  <figure><img src="logo/wordmark-sin-trazo.svg" alt="ToDoi" width="340"><br>sin el trazo: To Do i</figure>
+  <figure><img src="logo/wordmark.svg" alt="ToDai" width="340"><br>con el trazo: To Da i (Today)</figure>
+</div>
+<p>Serif con las parejas <b>To</b> y <b>Do</b> apretadas: la «o» queda metida bajo el brazo de la T y la D casi toca a la «o». La «a» es cursiva y está escrita con <b>pluma de punta ancha</b>: la plumilla, inclinada a 34°, deja la bajada con el grosor de la asta de la fuente, afina la curva y termina la salida casi en un pelo, con dos gotas pequeñas que salta la pluma al levantarse.</p>
+
+<h2>Marca, claro y oscuro</h2>
+<div class="card"><img src="logo/wordmark.svg" alt="ToDoi claro" width="340"><img src="logo/wordmark-oscuro.svg" alt="ToDoi oscuro" width="340"></div>
+
+<h2>Ícono de la app</h2>
+<div class="card sizes">
+  <figure><img src="logo/icono-blanco.svg" width="160" height="160" alt="">todo blanco</figure>
+  <figure><img src="logo/icono-tinta.svg" width="160" height="160" alt="">trazo en tinta</figure>
+  <figure><img src="logo/icono-blanco.svg" width="60" height="60" alt="">60 px</figure>
+  <figure><img src="logo/icono-blanco.svg" width="32" height="32" alt="">32 px</figure>
+</div>
+
+<h2>Otras fuentes</h2>
+<div class="card"><figure><img src="logo/wordmark-hoefler.svg" alt="Hoefler Text" width="300"><br>Hoefler Text</figure><figure><img src="logo/wordmark-baskerville.svg" alt="Baskerville" width="300"><br>Baskerville SemiBold</figure><figure><img src="logo/wordmark-sans.svg" alt="Avenir Next" width="300"><br>Avenir Next (la versión sans anterior)</figure></div>
+<p><b>DM Serif Display</b> es la principal: serif de alto contraste y licencia libre (OFL), así que sirve también si la app se vende. Hoefler Text y Baskerville son fuentes de macOS: más clásicas, pero con licencia propietaria (para un logo comercial habría que comprarla).</p>
+</main></body></html>
