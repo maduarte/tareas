@@ -16,7 +16,7 @@ SERIF = {
     '-baskerville': {'ruta': SU + 'Baskerville.ttc', 'idx': 4},
 }
 CLARO, OSCURO = ('#2a2a2a', '#e05a5a', '#f8f7f5'), ('#ecebe8', '#ec6f6f', '#1b1a19')
-ICONO_OSCURO = ('#0d0d0d', '#e05a5a')    # ícono para modo oscuro: fondo negro, 'o' blanca, trazo rojo
+ICONO_OSCURO = ('#0d0d0d', '#e05a5a')    # ícono oficial de la app: fondo negro, 'o' blanca, trazo rojo
 
 for suf, spec in SERIF.items():
     if not os.path.exists(spec['ruta']):
@@ -53,12 +53,8 @@ if '<!--marca-->' in html:
 info = marca.marca(f, '#2a2a2a', '#e05a5a')[2]
 if shutil.which('qlmanage') and shutil.which('sips'):
     tmp = tempfile.mkdtemp()
-    variantes = {
-        'claro': marca.icono(info, '#fff', size=1024, rx=0),
-        'oscuro': marca.icono(info, ICONO_OSCURO[1], accent=ICONO_OSCURO[0], size=1024, rx=0),
-    }
-    salidas = (('claro', 'icon-512.png', 512), ('claro', 'icon-192.png', 192), ('claro', 'apple-touch-icon.png', 180),
-               ('oscuro', 'apple-touch-icon-oscuro.png', 180))
+    variantes = {'oficial': marca.icono(info, ICONO_OSCURO[1], accent=ICONO_OSCURO[0], size=1024, rx=0)}
+    salidas = (('oficial', 'icon-512.png', 512), ('oficial', 'icon-192.png', 192), ('oficial', 'apple-touch-icon.png', 180))
     for var, svg_ in variantes.items():
         src = os.path.join(tmp, f'icono-{var}.svg')
         open(src, 'w').write(svg_)

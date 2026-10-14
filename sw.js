@@ -1,6 +1,6 @@
 // Subir el número de CACHE cuando cambie la lista de archivos o su estrategia.
-const CACHE = 'tareas-v7';
-const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './apple-touch-icon-oscuro.png'];
+const CACHE = 'tareas-v8';
+const FILES = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
