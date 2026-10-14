@@ -251,7 +251,7 @@
     <div class="sec">
       <h3>Widget del Mac</h3>
       <p class="hint" id="widgetInfo" style="margin:0 0 10px"></p>
-      <div class="btnrow"><button class="btn2" id="widgetBtn" onclick="toggleWidget()"></button><button class="btn2" id="widgetCopy" onclick="copyWidgetToken()" style="display:none">Copiar código de lectura</button></div>
+      <div class="btnrow"><button class="btn2" id="widgetBtn" onclick="toggleWidget()"></button><button class="btn2" id="widgetCopy" onclick="copyWidgetToken()" style="display:none">Copiar datos del widget</button></div>
     </div>
 
     <div class="sec">
@@ -1039,16 +1039,16 @@ async function toggleWidget() {
 async function renderWidgetInfo() {
   const on = widgetOn();
   document.getElementById('widgetInfo').textContent = on
-    ? 'Activo: este dispositivo publica la lista de HOY (título, grupo, urgencia y plazo) para el widget del Mac. Copia el código de lectura y pégalo en el widget. Solo permite leer.'
+    ? 'Activo: este dispositivo publica la lista de HOY (título, grupo, urgencia y plazo) para el widget del Mac. Copia los datos del widget y pégalos en el archivo de configuración del Mac. Solo permite leer.'
     : 'Publica la lista de HOY en el servidor para verla en el widget del Mac. Es de solo lectura; marcar tareas se hace aquí.';
   document.getElementById('widgetBtn').textContent = on ? 'Desactivar' : 'Activar';
   document.getElementById('widgetCopy').style.display = on ? '' : 'none';
 }
 async function copyWidgetToken() {
   const b = document.getElementById('widgetCopy');
-  try { await navigator.clipboard.writeText(await readToken()); b.textContent = 'Copiado'; }
+  try { await navigator.clipboard.writeText(location.origin + '\n' + await readToken() + '\n'); b.textContent = 'Copiado'; }
   catch(e) { b.textContent = 'No se pudo copiar'; }
-  setTimeout(() => { b.textContent = 'Copiar código de lectura'; }, 2000);
+  setTimeout(() => { b.textContent = 'Copiar datos del widget'; }, 2000);
 }
 
 // ─── HOJA DE ALARMA: posponer / hecho ────────────────────────────
