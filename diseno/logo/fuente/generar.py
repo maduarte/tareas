@@ -63,6 +63,11 @@ if shutil.which('qlmanage') and shutil.which('sips'):
         destino = os.path.join(RAIZ, nombre)
         shutil.copy(os.path.join(tmp, f'icono-{var}.svg.png'), destino)
         subprocess.run(['sips', '-z', str(lado), str(lado), destino], capture_output=True)
+    # Ícono del widget de Mac: el mismo, redondeado y con margen (qlmanage no deja transparencia)
+    if shutil.which('swiftc'):
+        helper = os.path.join(tmp, 'icono_mac')
+        subprocess.run(['swiftc', os.path.join(AQUI, 'icono_mac.swift'), '-o', helper], check=True)
+        subprocess.run([helper, os.path.join(tmp, 'icono-oficial.svg.png'), os.path.join(RAIZ, 'widget', 'AppIcon.png')], check=True)
 
 avenir = '/System/Library/Fonts/Avenir Next.ttc'
 

@@ -1,9 +1,9 @@
 #!/bin/sh
-# Instala el widget: copia la app a ~/Applications y la registra como LaunchAgent
+# Instala el widget: mueve la app a ~/Applications y la registra como LaunchAgent
 # (arranca al iniciar sesión y se relanza si se cierra). Desinstalar: ./uninstall.sh
 set -e
 cd "$(dirname "$0")"
-[ -d "build/ToDoi Widget.app" ] || ./build.sh
+./build.sh
 DEST="$HOME/Applications/ToDoi Widget.app"
 PLIST="$HOME/Library/LaunchAgents/cl.tareas.widget.plist"
 LABEL="cl.tareas.widget"
@@ -13,7 +13,11 @@ pkill -x ToDoiWidget 2>/dev/null || true
 # Versiones anteriores al cambio de nombre (se llamaba "Tareas Widget")
 pkill -x TareasWidget 2>/dev/null || true
 rm -rf "$DEST" "$HOME/Applications/Tareas Widget.app"
-cp -R "build/ToDoi Widget.app" "$DEST"
+# Mover (no copiar) y quitar el registro de build/: si no, aparece dos veces en Aplicaciones
+mv "build/ToDoi Widget.app" "$DEST"
+LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
+"$LSREGISTER" -u "$PWD/build/ToDoi Widget.app" 2>/dev/null || true
+"$LSREGISTER" -f "$DEST" 2>/dev/null || true
 cat > "$PLIST" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">

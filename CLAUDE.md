@@ -25,7 +25,7 @@ api/                funciones serverless de Vercel (SIN package.json)
   cron/queue.js     cron diario: encola en QStash las alarmas que entran en su ventana de 24 h
   _alarms.js        cola de QStash y envío de push compartidos
   snapshot.js       POST/GET/DELETE de la instantánea de HOY y de lo programado hasta el siguiente día hábil, para el widget del Mac (lectura por token derivado)
-widget/             widget de escritorio para Mac (Swift/AppKit, sin Xcode): build.sh, install.sh, uninstall.sh
+widget/             widget de escritorio para Mac (Swift/AppKit, sin Xcode): build.sh, install.sh, uninstall.sh, AppIcon.png
 tools/vapid-keys.mjs  genera las claves VAPID (se corre a mano)
 diseno/mockup.html  mockup estático del diseño
 diseno/logo.html    logo ToDoi (marca, ícono, alternativas); los SVG están en diseno/logo/
@@ -47,7 +47,7 @@ diseno/logo/fuente/ generador de los SVG (python3 diseno/logo/fuente/generar.py,
 - Los errores del servidor van a `console.error`; al navegador solo un mensaje genérico.
 - El código de dispositivo (`tareas_codigo`, 32 hex) es la única credencial. Se genera en el dispositivo; nunca se muestra ni se registra.
 - Al cambiar `sw.js` o la lista de archivos precacheados, subir `CACHE`.
-- **Nombre: ToDoi.** El logo del encabezado (`<!--marca-->…<!--/marca-->` en `index.html`) y los íconos PNG los genera `diseno/logo/fuente/generar.py`; no editarlos a mano.
+- **Nombre: ToDoi.** El logo del encabezado (`<!--marca-->…<!--/marca-->` en `index.html`) y los íconos PNG (incluido `widget/AppIcon.png`) los genera `diseno/logo/fuente/generar.py`; no editarlos a mano.
 
 ## Datos locales (`localStorage`)
 
